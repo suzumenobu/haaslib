@@ -65,10 +65,7 @@ impl Api {
         self.execute(uri, HttpMethod::Get)
     }
 
-    pub fn create_lab(
-        &self,
-        req: model::CreateLabRequest<'_>,
-    ) -> Result<model::UserLabDetails> {
+    pub fn create_lab(&self, req: model::CreateLabRequest<'_>) -> Result<model::UserLabDetails> {
         let uri = self.wrap_with_credentials(format!(
             "LabsAPI.php?channel=CREATE_LAB&scriptId={}&name={}&accountId={}&market={}&interval={}&style={}",
             req.script_id, req.name, req.account_id, req.market, req.interval, req.style.value()
@@ -95,10 +92,7 @@ impl Api {
         self.execute(uri, HttpMethod::Get)
     }
 
-    pub fn update_lab_details(
-        &self,
-        details: &UserLabDetails,
-    ) -> Result<model::UserLabDetails> {
+    pub fn update_lab_details(&self, details: &UserLabDetails) -> Result<model::UserLabDetails> {
         let uri = self.wrap_with_credentials(format!(
             "LabsAPI.php?channel=UPDATE_LAB_DETAILS&labid={}&name={}&type={}&config={}&settings={}&parameters={}",
             details.lab_id,
@@ -144,7 +138,7 @@ impl Api {
     {
         let url = format!("{}://{}:{}/{}", self.protocol, self.address, self.port, uri);
 
-        log::debug!("Executing [{}]", url);
+        log::trace!("Executing [{}]", url);
 
         let resp = match method {
             HttpMethod::Get => self.client.get(url).send()?,

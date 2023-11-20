@@ -96,9 +96,10 @@ where
 
 pub fn wait_for_lab_execution(api: &Api, lab_id: &str) -> Result<()> {
     loop {
-        match api.get_lab_details(lab_id)?.status {
+        let details = api.get_lab_details(lab_id)?;
+        match details.status {
             UserLabStatus::Completed => {
-                log::info!("Execution completed!");
+                log::debug!("Execution of {} completed!", details.name);
                 break;
             }
             UserLabStatus::Cancelled => {
