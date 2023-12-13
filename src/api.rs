@@ -1,19 +1,29 @@
+/// Imports necessary crates and model structs 
 use crate::model::{self, CustomReport, PaginatedResponse, UserLabBacktestResult, UserLabDetails};
 use crate::Result;
 use anyhow::anyhow;
 use log;
 use reqwest::blocking::Client;
 use serde::de::DeserializeOwned;
-
+/// Main Api struct to manage state and make requests
 pub struct Api {
+
+    /// Config fields  
     address: String,
     port: String,
     protocol: String,
-    client: Client,
-    credentials: Option<UserCredentials>,
+    
+    /// Underlying client for making requests
+    client: Client,  
+
+    /// Optional logged in user credentials
+    credentials: Option<UserCredentials>, 
 }
 
+/// Api implementation 
 impl Api {
+
+    /// Constructor 
     pub fn new(address: String, port: String, protocol: String) -> Self {
         Self {
             address,
@@ -23,25 +33,32 @@ impl Api {
             credentials: None,
         }
     }
-
+    /// Login user by email + secret key and store credentials
     pub fn app_login(&mut self, email: &str, secret_key: &str) -> Result<()> {
-        let interface_key = (1..10)
+     
+        /// Generate random interface key 
+        let interface_key = (1..10)  
             .map(|_| rand::random::<u8>().to_string())
             .collect::<String>();
 
+        /// Build login url 
         let uri = format!(
             "UserAPI.php?channel=APP_LOGIN&email={}&secretkey={}&interfaceKey={}",
             email, secret_key, interface_key
         );
+        
+        /// Make login request
         let resp = self.execute::<model::AppLogin, _>(uri, HttpMethod::Get)?;
+        
+        /// Store credentials on success 
         self.credentials = Some(UserCredentials {
             interface_key,
-            user_id: resp.details.user_id,
+            user_id: resp.details.user_id, 
         });
 
         Ok(())
     }
-
+    /// Methods to call various API endpoints
     pub fn all_markets(&self) -> Result<Vec<model::CloudMarket>> {
         let uri = "PriceAPI.php?channel=MARKETLIST";
         self.execute(uri, HttpMethod::Get)
@@ -130,25 +147,30 @@ impl Api {
         ))?;
         self.execute(url, HttpMethod::Get)
     }
-
-    fn execute<T, U>(&self, uri: U, method: HttpMethod) -> Result<T>
-    where
+   /// Shared method to make API request
+   fn execute<T, U>(&self, uri: U, method: HttpMethod) -> Result<T> 
+   where
         T: serde::de::DeserializeOwned,
         U: AsRef<str> + std::fmt::Display,
-    {
-        let url = format!("{}://{}:{}/{}", self.protocol, self.address, self.port, uri);
+   {
+       /// Build full URL  
+       let url = format!("{}://{}:{}/{}", self.protocol, self.address, self.port, uri);
 
-        log::trace!("Executing [{}]", url);
-
-        let resp = match method {
-            HttpMethod::Get => self.client.get(url).send()?,
-        };
-
-        resp.json::<model::ApiResponse<T>>()
-            .map(|r| r.data)
-            .map_err(|e| anyhow::anyhow!(e))
+       /// Log URL called
+       log::trace!("Executing [{}]", url);
+       
+       /// Make request based on method  
+       let resp = match method {
+           HttpMethod::Get => self.client.get(url).send()?,
+       };
+       
+       /// Parse response  
+       resp.json::<model::ApiResponse<T>>()
+           .map(|r| r.data)
+           .map_err(|e| anyhow::anyhow!(e))
     }
 
+     /// Helper to append credentials 
     fn wrap_with_credentials<U: AsRef<str> + std::fmt::Display>(&self, uri: U) -> Result<String> {
         match &self.credentials {
             Some(creds) => Ok(format!(
@@ -162,11 +184,13 @@ impl Api {
     }
 }
 
+/// Struct to store user credentials
 struct UserCredentials {
     user_id: String,
-    interface_key: String,
+    interface_key: String,  
 }
 
+/// Enum to define HTTP methods 
 enum HttpMethod {
     Get,
 }
