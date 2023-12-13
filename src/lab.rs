@@ -1,3 +1,6 @@
+/// Contains helper functions for executing backtests 
+/// Handles configuring, running, monitoring and collecting results
+
 use crate::{
     api::Api,
     lab,
@@ -9,9 +12,10 @@ use crate::{
 };
 use anyhow::anyhow;
 use serde::de::DeserializeOwned;
-
+/// Helper to convert between option types
 impl From<UserLabParameterOption> for String {
     fn from(val: UserLabParameterOption) -> Self {
+        /// Match on inner type and convert 
         use UserLabParameterOption::*;
         match val {
             Digit(i) => i.to_string(),
@@ -59,8 +63,12 @@ impl<S: ToString> ChangeHaasScriptParameterRequest<S> {
         }
     }
 }
+/// Similar helpers for other types
 
+/// Handles configuring parameters before backtest run  
 pub fn update_params<'a, S: ToString + 'a>(
+    /// Finds param in settings by name
+    /// Updates options value  
     settings: &mut [UserLabParameter],
     params: impl IntoIterator<Item = &'a ChangeHaasScriptParameterRequest<S>>,
 ) -> Result<()> {
@@ -79,7 +87,7 @@ pub fn update_params<'a, S: ToString + 'a>(
     }
     Ok(())
 }
-
+/// Kicks off backtest and collects result
 pub fn execute<T>(
     api: &Api,
     lab_id: &str,
@@ -89,11 +97,14 @@ where
     T: CustomReport + DeserializeOwned,
 {
     let req = StartLabExecutionRequest::new(lab_id, period, false);
+    /// Starts execution
     api.start_lab_execution(req)?;
+    /// Wait for status != Running
     lab::wait_for_lab_execution(api, lab_id)?;
+     /// Fetch all pages of results 
     api.get_backtest_result(lab_id, 0, 1_000_000)
 }
-
+/// Polls status API till backtest finishes
 pub fn wait_for_lab_execution(api: &Api, lab_id: &str) -> Result<()> {
     loop {
         let details = api.get_lab_details(lab_id)?;
@@ -104,6 +115,7 @@ pub fn wait_for_lab_execution(api: &Api, lab_id: &str) -> Result<()> {
             }
             UserLabStatus::Cancelled => {
                 log::warn!("Lab {} was canceled", lab_id);
+                /// Exit loop when done
                 break;
             }
             status => {
