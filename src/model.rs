@@ -4,33 +4,38 @@ use std::{
     collections::HashMap,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Deserialize, Debug)] // Deserialize JSON into structure 
+#[serde(rename_all = "PascalCase")] // Standardize naming convention on deserialization
 pub struct ApiResponse<T> {
+
     pub success: bool,
     pub error: String,
-    pub data: T,
+    pub data: T,  
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug)]  
 #[serde(rename_all = "PascalCase")]
 pub struct AppLogin {
-    pub is_success: bool,
+
+    pub is_success: bool, 
     pub error: i64,
-    pub details: UserDetails,
+    pub details: UserDetails,  
 }
 
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Deserialize, Debug)]   
+#[serde(rename_all = "PascalCase")] 
 pub struct UserDetails {
+
     pub user_id: String,
-    pub interface_secret: String,
+    pub interface_secret: String, 
     pub license_details: serde_json::Value,
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+// Bot definition
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]  
 pub struct HaasBot {
+    
+    // Field mappings to JSON  
     #[serde(rename = "UI")]
     pub user_id: String,
     #[serde(rename = "ID")]
@@ -86,7 +91,7 @@ pub struct HaasBot {
     #[serde(rename = "F")]
     pub followers: i64,
 }
-
+// Script item with dependencies
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
 pub struct HaasScriptItemWithDependencies {
     #[serde(rename = "D")]
@@ -116,7 +121,7 @@ pub struct HaasScriptItemWithDependencies {
     #[serde(rename = "FID")]
     pub folder_id: i64,
 }
-
+// Lab creation request 
 #[derive(Clone)]
 pub struct CreateLabRequest<'a> {
     pub script_id: &'a str,
@@ -141,6 +146,7 @@ impl HaasChartPricePlotStyle {
         }
     }
 }
+// User accounts 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
 pub struct UserAccount {
     #[serde(rename = "UID")]
@@ -170,7 +176,7 @@ pub struct UserAccount {
     #[serde(rename = "V")]
     pub version: i64,
 }
-
+// Lab details
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct UserLabDetails {
     #[serde(rename = "C")]
@@ -212,7 +218,7 @@ pub struct UserLabDetails {
     #[serde(rename = "CM")]
     pub cancel_reason: serde_json::Value,
 }
-
+// Lab status enum
 #[derive(Debug, PartialEq, serde_repr::Serialize_repr, serde_repr::Deserialize_repr)]
 #[repr(u8)]
 pub enum UserLabStatus {
@@ -280,7 +286,9 @@ pub enum UserLabParameterOption {
     Float(f64),
     Bool(bool),
 }
+// Structs for lab config, settings, parameters 
 
+// Start lab execution  
 pub struct StartLabExecutionRequest<'a> {
     pub lab_id: &'a str,
     pub start_unix: u64,
@@ -305,7 +313,7 @@ impl<'a> StartLabExecutionRequest<'a> {
         }
     }
 }
-
+// Market from cloud provider 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
 pub struct CloudMarket {
     #[serde(rename = "PS")]
@@ -331,7 +339,7 @@ impl CloudMarket {
         format!("{}_{}_{}_", self.price_source, self.primary, self.secondary)
     }
 }
-
+// Backtest time periods
 #[derive(Clone, Copy, Debug)]
 pub enum BacktestPeriod {
     Day(u64),
@@ -353,7 +361,7 @@ impl BacktestPeriod {
         }
     }
 }
-
+// Paginated responses
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PaginatedResponse<T> {
     #[serde(rename = "I")]
@@ -361,7 +369,7 @@ pub struct PaginatedResponse<T> {
     #[serde(rename = "NP")]
     pub next_page_id: i64,
 }
-
+// Backtest result 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UserLabBacktestResult<T: CustomReport> {
     #[serde(rename = "RID")]
@@ -415,7 +423,7 @@ pub struct CustomReportWrapper<T> {
     #[serde(rename = "Custom Report")]
     pub data: T,
 }
-
+// Trait for custom reports 
 pub trait CustomReport: PartialEq + Clone {}
 
 #[cfg(test)]
