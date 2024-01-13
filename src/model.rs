@@ -1,41 +1,58 @@
+/// Module containing data structures related to API responses and various model representations.
+///
+/// ## Examples
+///
+/// ### Parsing an API Response
+/// ```rust
+/// use crate::model::{ApiResponse, UserDetails};
+///
+/// let response_json = r#"{ "success": true, "error": "", "data": { "user_id": "123", "interface_secret": "secret", "license_details": {} } }"#;
+/// let response: ApiResponse<UserDetails> = serde_json::from_str(response_json).unwrap();
+/// ```
+///
+/// ### Creating a ChangeHaasScriptParameterRequest
+/// ```rust
+/// use crate::model::{ChangeHaasScriptParameterRequest, UserLabParameterOption};
+///
+/// let request = ChangeHaasScriptParameterRequest::new("ParameterName", vec![UserLabParameterOption::Digit(42)]);
+/// ```
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{
     collections::HashMap,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
-#[derive(Deserialize, Debug)] // Deserialize JSON into structure 
-#[serde(rename_all = "PascalCase")] // Standardize naming convention on deserialization
-pub struct ApiResponse<T> {
 
+/// Model wrapper for the most of Haas responses.
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct ApiResponse<T> {
     pub success: bool,
     pub error: String,
-    pub data: T,  
+    pub data: T,
 }
 
-#[derive(Deserialize, Debug)]  
+/// Response model for authentication.
+#[derive(Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 pub struct AppLogin {
-
-    pub is_success: bool, 
+    pub is_success: bool,
     pub error: i64,
-    pub details: UserDetails,  
+    pub details: UserDetails,
 }
 
-#[derive(Deserialize, Debug)]   
-#[serde(rename_all = "PascalCase")] 
+/// DTO for auth details.
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
 pub struct UserDetails {
-
     pub user_id: String,
-    pub interface_secret: String, 
+    pub interface_secret: String,
     pub license_details: serde_json::Value,
 }
 
-// Bot definition
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]  
+/// DTO for HaasBot.
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HaasBot {
-    
-    // Field mappings to JSON  
     #[serde(rename = "UI")]
     pub user_id: String,
     #[serde(rename = "ID")]
@@ -91,7 +108,7 @@ pub struct HaasBot {
     #[serde(rename = "F")]
     pub followers: i64,
 }
-// Script item with dependencies
+
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
 pub struct HaasScriptItemWithDependencies {
     #[serde(rename = "D")]
@@ -121,7 +138,8 @@ pub struct HaasScriptItemWithDependencies {
     #[serde(rename = "FID")]
     pub folder_id: i64,
 }
-// Lab creation request 
+
+/// Request model for lab creation.
 #[derive(Clone)]
 pub struct CreateLabRequest<'a> {
     pub script_id: &'a str,
@@ -132,6 +150,7 @@ pub struct CreateLabRequest<'a> {
     pub style: HaasChartPricePlotStyle,
 }
 
+/// Enumeration for lab charts style configuation.
 #[derive(Clone, Copy)]
 pub enum HaasChartPricePlotStyle {
     CandleStick,
@@ -146,7 +165,8 @@ impl HaasChartPricePlotStyle {
         }
     }
 }
-// User accounts 
+
+/// DTO for user account.
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
 pub struct UserAccount {
     #[serde(rename = "UID")]
@@ -176,7 +196,8 @@ pub struct UserAccount {
     #[serde(rename = "V")]
     pub version: i64,
 }
-// Lab details
+
+/// DTO with user lab details.
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct UserLabDetails {
     #[serde(rename = "C")]
@@ -218,7 +239,8 @@ pub struct UserLabDetails {
     #[serde(rename = "CM")]
     pub cancel_reason: serde_json::Value,
 }
-// Lab status enum
+
+/// Enumeration for tracking lab execution state.
 #[derive(Debug, PartialEq, serde_repr::Serialize_repr, serde_repr::Deserialize_repr)]
 #[repr(u8)]
 pub enum UserLabStatus {
@@ -229,6 +251,7 @@ pub enum UserLabStatus {
     Cancelled = 4,
 }
 
+/// DTO for user lab configuration.
 #[derive(Default, Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct UserLabConfig {
     #[serde(rename = "MP")]
@@ -243,6 +266,7 @@ pub struct UserLabConfig {
     pub adjust_rate: f64,
 }
 
+/// DTO with HaasScript settings.
 #[derive(Default, Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HaasScriptSettings {
@@ -260,10 +284,12 @@ pub struct HaasScriptSettings {
     pub script_parameters: ScriptParameters,
 }
 
+/// Dummy DTO to fix JSON deserialization
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScriptParameters {}
 
+/// DTO for lab parameter
 #[derive(Default, Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct UserLabParameter {
     #[serde(rename = "K")]
@@ -278,6 +304,7 @@ pub struct UserLabParameter {
     pub is_specific: bool,
 }
 
+/// Custom wrapper around possible lab parameter values
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 #[serde(untagged)]
 pub enum UserLabParameterOption {
@@ -286,9 +313,8 @@ pub enum UserLabParameterOption {
     Float(f64),
     Bool(bool),
 }
-// Structs for lab config, settings, parameters 
 
-// Start lab execution  
+/// Custom request DTO for starting lab execution
 pub struct StartLabExecutionRequest<'a> {
     pub lab_id: &'a str,
     pub start_unix: u64,
@@ -300,9 +326,9 @@ impl<'a> StartLabExecutionRequest<'a> {
     pub fn new(lab_id: &'a str, period: BacktestPeriod, send_email: bool) -> Self {
         let end_unix = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap() // It's OK, UNIX_EPOCH always earlier then now
+            .unwrap()
             .as_secs()
-            - 100; // Some diff between real now cause API bug
+            - 100;
 
         let start_unix = end_unix - Duration::from_secs(period.as_secs()).as_secs();
         Self {
@@ -313,7 +339,8 @@ impl<'a> StartLabExecutionRequest<'a> {
         }
     }
 }
-// Market from cloud provider 
+
+/// DTO for available markets and trading pairs
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
 pub struct CloudMarket {
     #[serde(rename = "PS")]
@@ -339,7 +366,8 @@ impl CloudMarket {
         format!("{}_{}_{}_", self.price_source, self.primary, self.secondary)
     }
 }
-// Backtest time periods
+
+/// Custom wrapper for backtest periods in UNIX time
 #[derive(Clone, Copy, Debug)]
 pub enum BacktestPeriod {
     Day(u64),
@@ -361,7 +389,8 @@ impl BacktestPeriod {
         }
     }
 }
-// Paginated responses
+
+/// Response model for the all paginated data
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PaginatedResponse<T> {
     #[serde(rename = "I")]
@@ -369,7 +398,8 @@ pub struct PaginatedResponse<T> {
     #[serde(rename = "NP")]
     pub next_page_id: i64,
 }
-// Backtest result 
+
+/// Response model for lab backtest execution result
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UserLabBacktestResult<T: CustomReport> {
     #[serde(rename = "RID")]
@@ -400,6 +430,7 @@ pub struct UserLabBacktestResult<T: CustomReport> {
     pub summary: UserLabsBacktestSummary<T>,
 }
 
+/// DTO with lab backtest summary result
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UserLabsBacktestSummary<T: CustomReport> {
     #[serde(rename = "O")]
@@ -418,12 +449,13 @@ pub struct UserLabsBacktestSummary<T: CustomReport> {
     pub custom_report: CustomReportWrapper<T>,
 }
 
+/// DTO to handle custom reports
 #[derive(Debug, Clone, PartialEq, Deserialize, Default, Serialize)]
 pub struct CustomReportWrapper<T> {
     #[serde(rename = "Custom Report")]
     pub data: T,
 }
-// Trait for custom reports 
+
 pub trait CustomReport: PartialEq + Clone {}
 
 #[cfg(test)]

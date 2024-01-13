@@ -1,8 +1,40 @@
-/// Contains helper functions for executing backtests 
-/// Handles configuring, running, monitoring and collecting results
-
+/// Module providing utility functions for managing HaasScript parameters and executing labs.
+///
+/// # Examples
+///
+/// ## Creating a ChangeHaasScriptParameterRequest
+/// ```
+/// use crate::lab_execution::{ChangeHaasScriptParameterRequest, UserLabParameterOption};
+///
+/// let request = ChangeHaasScriptParameterRequest::new("ParameterName", vec![UserLabParameterOption::Digit(42)]);
+/// ```
+///
+/// ## Updating HaasScript Parameters
+/// ```
+/// use crate::lab_execution::{ChangeHaasScriptParameterRequest, update_params, UserLabParameter, UserLabParameterOption};
+///
+/// let mut parameters: Vec<UserLabParameter> = //... get current parameters
+/// let request = ChangeHaasScriptParameterRequest::new("ParameterName", vec![UserLabParameterOption::Digit(42)]);
+///
+/// update_params(&mut parameters, &[&request])?;
+/// ```
+///
+/// ## Executing a Lab and Waiting for Execution to Complete
+/// ```
+/// use crate::lab_execution::{execute, wait_for_lab_execution};
+/// use crate::api::{Authenticated, ReqwestExecutor};
+/// use crate::model::BacktestPeriod;
+/// use crate::Result;
+///
+/// fn execute_lab(executor: &ReqwestExecutor<Authenticated>, lab_id: &str) -> Result<()> {
+///     let period = BacktestPeriod::Day;
+///     execute(executor, lab_id, period)?;
+///     wait_for_lab_execution(executor, lab_id)?;
+///     Ok(())
+/// }
+/// ```
 use crate::{
-    api::Api,
+    api::{self, Authenticated, Executor},
     lab,
     model::{
         BacktestPeriod, CustomReport, PaginatedResponse, StartLabExecutionRequest,
@@ -12,10 +44,9 @@ use crate::{
 };
 use anyhow::anyhow;
 use serde::de::DeserializeOwned;
-/// Helper to convert between option types
+
 impl From<UserLabParameterOption> for String {
     fn from(val: UserLabParameterOption) -> Self {
-        /// Match on inner type and convert 
         use UserLabParameterOption::*;
         match val {
             Digit(i) => i.to_string(),
@@ -44,6 +75,7 @@ impl From<String> for UserLabParameterOption {
     }
 }
 
+/// Struct representing a request to change a HaasScript parameter.
 pub struct ChangeHaasScriptParameterRequest<T: ToString> {
     pub name: T,
     pub options: Vec<UserLabParameterOption>,
@@ -63,12 +95,18 @@ impl<S: ToString> ChangeHaasScriptParameterRequest<S> {
         }
     }
 }
-/// Similar helpers for other types
 
-/// Handles configuring parameters before backtest run  
+/// Updates HaasScript parameters based on a collection of ChangeHaasScriptParameterRequest.
+///
+/// # Arguments
+///
+/// * `settings` - The current HaasScript parameters to be updated.
+/// * `params` - An iterator over ChangeHaasScriptParameterRequest containing the updates.
+///
+/// # Returns
+///
+/// A Result indicating success or an error if the update fails.
 pub fn update_params<'a, S: ToString + 'a>(
-    /// Finds param in settings by name
-    /// Updates options value  
     settings: &mut [UserLabParameter],
     params: impl IntoIterator<Item = &'a ChangeHaasScriptParameterRequest<S>>,
 ) -> Result<()> {
@@ -87,9 +125,21 @@ pub fn update_params<'a, S: ToString + 'a>(
     }
     Ok(())
 }
-/// Kicks off backtest and collects result
+
+/// Executes a lab and retrieves the backtest result for an authenticated user.
+///
+/// # Arguments
+///
+/// * `executor` - The API executor for an authenticated user.
+/// * `lab_id` - The ID of the lab to execute.
+/// * `period` - The backtest period to use.
+///
+/// # Returns
+///
+/// A Result containing a PaginatedResponse with UserLabBacktestResult items if successful,
+/// or an error if the API call fails.
 pub fn execute<T>(
-    api: &Api,
+    executor: &impl Executor<Authenticated>,
     lab_id: &str,
     period: BacktestPeriod,
 ) -> Result<PaginatedResponse<UserLabBacktestResult<T>>>
@@ -97,17 +147,27 @@ where
     T: CustomReport + DeserializeOwned,
 {
     let req = StartLabExecutionRequest::new(lab_id, period, false);
-    /// Starts execution
-    api.start_lab_execution(req)?;
-    /// Wait for status != Running
-    lab::wait_for_lab_execution(api, lab_id)?;
-     /// Fetch all pages of results 
-    api.get_backtest_result(lab_id, 0, 1_000_000)
+
+    api::start_lab_execution(executor, req)?;
+
+    lab::wait_for_lab_execution(executor, lab_id)?;
+
+    api::get_backtest_result(executor, lab_id, 0, 1_000_000)
 }
-/// Polls status API till backtest finishes
-pub fn wait_for_lab_execution(api: &Api, lab_id: &str) -> Result<()> {
+
+/// Waits for the execution of a lab to complete.
+///
+/// # Arguments
+///
+/// * `executor` - The API executor for an authenticated user.
+/// * `lab_id` - The ID of the lab to monitor.
+///
+/// # Returns
+///
+/// A Result indicating success or an error if the lab execution fails.
+pub fn wait_for_lab_execution(executor: &impl Executor<Authenticated>, lab_id: &str) -> Result<()> {
     loop {
-        let details = api.get_lab_details(lab_id)?;
+        let details = api::get_lab_details(executor, lab_id)?;
         match details.status {
             UserLabStatus::Completed => {
                 log::debug!("Execution of {} completed!", details.name);
@@ -115,7 +175,7 @@ pub fn wait_for_lab_execution(api: &Api, lab_id: &str) -> Result<()> {
             }
             UserLabStatus::Cancelled => {
                 log::warn!("Lab {} was canceled", lab_id);
-                /// Exit loop when done
+
                 break;
             }
             status => {
