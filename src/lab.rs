@@ -35,10 +35,11 @@
 /// ```
 use crate::{
     api::{self, Authenticated, Executor},
+    domain::BacktestPeriod,
     lab,
     model::{
-        BacktestPeriod, CustomReport, PaginatedResponse, StartLabExecutionRequest,
-        UserLabBacktestResult, UserLabParameter, UserLabParameterOption, UserLabStatus,
+        CustomReport, PaginatedResponse, StartLabExecutionRequest, UserLabBacktestResult,
+        UserLabParameter, UserLabParameterOption, UserLabStatus,
     },
     Result,
 };

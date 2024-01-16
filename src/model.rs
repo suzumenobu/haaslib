@@ -23,6 +23,8 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
+use crate::domain::BacktestPeriod;
+
 /// Model wrapper for the most of Haas responses.
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
@@ -364,29 +366,6 @@ impl std::fmt::Display for CloudMarket {
 impl CloudMarket {
     pub fn as_market_tag(&self) -> String {
         format!("{}_{}_{}_", self.price_source, self.primary, self.secondary)
-    }
-}
-
-/// Custom wrapper for backtest periods in UNIX time
-#[derive(Clone, Copy, Debug)]
-pub enum BacktestPeriod {
-    Day(u64),
-    Month(u64),
-}
-
-impl BacktestPeriod {
-    pub fn as_secs(&self) -> u64 {
-        match self {
-            BacktestPeriod::Day(count) => 86400 * count,
-            BacktestPeriod::Month(count) => 86400 * (*count as f64 * 30.5) as u64,
-        }
-    }
-
-    pub fn as_days(&self) -> u64 {
-        match self {
-            BacktestPeriod::Day(count) => *count,
-            BacktestPeriod::Month(count) => (*count as f64 * 30.5) as u64,
-        }
     }
 }
 

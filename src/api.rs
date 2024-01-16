@@ -218,7 +218,7 @@ impl Executor<Authenticated> for ReqwestExecutor<Authenticated> {
 /// # Returns
 ///
 /// A Result containing a vector of CloudMarket if successful, or an error if the API call fails.
-pub fn all_markets<S>(executor: &impl Executor<S>) -> Result<Vec<model::CloudMarket>> {
+pub fn get_all_markets<S>(executor: &impl Executor<S>) -> Result<Vec<model::CloudMarket>> {
     let uri = "PriceAPI.php?channel=MARKETLIST";
     executor.execute(uri)
 }
