@@ -145,11 +145,17 @@ impl ReqwestExecutor<Guest> {
             email, secret_key, interface_key
         );
 
-        let resp = self.execute::<model::AppLogin, _>(uri)?;
+        let resp = self.execute::<model::ApiResponse<Option<model::AppLogin>>, _>(uri)?;
+
+        log::debug!("Resp: {resp:?}");
 
         let credentials = UserCredentials {
             interface_key,
-            user_id: resp.details.user_id,
+            user_id: resp
+                .data
+                .expect("Failed to authenticate. Check your credentials in the config")
+                .details
+                .user_id,
         };
 
         Ok(ReqwestExecutor {
@@ -174,9 +180,12 @@ impl Executor<Guest> for ReqwestExecutor<Guest> {
 
         let resp = self.client.get(url).send()?;
 
-        resp.json::<model::ApiResponse<T>>()
-            .map(|r| r.data)
-            .map_err(|e| anyhow::anyhow!(e))
+        log::trace!("Got {:?} resp", resp.status());
+
+        let text = resp.text()?;
+        log::trace!("{}", &text);
+
+        serde_json::from_str(&text).map_err(|e| anyhow::anyhow!(e))
     }
 }
 
