@@ -41,9 +41,8 @@ use crate::{
         CustomReport, PaginatedResponse, StartLabExecutionRequest, UserLabBacktestResult,
         UserLabParameter, UserLabParameterOption, UserLabStatus,
     },
-    Result,
+    Error, Result,
 };
-use anyhow::anyhow;
 use serde::de::DeserializeOwned;
 
 impl From<UserLabParameterOption> for String {
@@ -117,10 +116,10 @@ pub fn update_params<'a, S: ToString + 'a>(
         let setting = settings
             .iter_mut()
             .find(|s| s.key.to_lowercase().contains(&param_name))
-            .ok_or(anyhow!(
-                "Failed to find {} in settings",
+            .ok_or(Error::Lab(format!(
+                "Failed to find {} in setting",
                 param.name.to_string()
-            ))?;
+            )))?;
 
         setting.options = param.options.clone()
     }

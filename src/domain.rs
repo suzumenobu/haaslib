@@ -20,3 +20,5 @@ impl BacktestPeriod {
         }
     }
 }
+
+pub struct MarketTag(String);

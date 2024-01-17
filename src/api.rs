@@ -177,7 +177,7 @@ impl ReqwestExecutor<Guest> {
 }
 
 impl Executor<Guest> for ReqwestExecutor<Guest> {
-    fn execute<T, U>(&self, uri: U) -> Result<T>
+    fn execute<T, U>(&self, uri: U) -> crate::Result<T>
     where
         T: serde::de::DeserializeOwned,
         U: AsRef<str> + std::fmt::Display,
@@ -193,7 +193,7 @@ impl Executor<Guest> for ReqwestExecutor<Guest> {
         let text = resp.text()?;
         log::trace!("{}", &text);
 
-        serde_json::from_str(&text).map_err(|e| anyhow::anyhow!(e))
+        Ok(serde_json::from_str(&text)?)
     }
 }
 
@@ -206,7 +206,7 @@ impl ReqwestExecutor<Authenticated> {
     }
 }
 impl Executor<Authenticated> for ReqwestExecutor<Authenticated> {
-    fn execute<T, U>(&self, uri: U) -> Result<T>
+    fn execute<T, U>(&self, uri: U) -> crate::Result<T>
     where
         T: serde::de::DeserializeOwned,
         U: AsRef<str> + std::fmt::Display,
@@ -219,9 +219,7 @@ impl Executor<Authenticated> for ReqwestExecutor<Authenticated> {
 
         let resp = self.client.get(url).send()?;
 
-        resp.json::<model::ApiResponse<T>>()
-            .map(|r| r.data)
-            .map_err(|e| anyhow::anyhow!(e))
+        Ok(resp.json::<model::ApiResponse<T>>().map(|r| r.data)?)
     }
 }
 // region:     --- API functions
@@ -250,7 +248,7 @@ pub fn get_all_markets<S>(executor: &impl Executor<S>) -> Result<Vec<model::Clou
 /// # Returns
 ///
 /// A Result containing a vector of CloudMarket if successful, or an error if the API call fails.
-pub fn markets<S>(
+pub fn get_all_markets_by_pricesource<S>(
     executor: &impl Executor<S>,
     price_source: &str,
 ) -> Result<Vec<model::CloudMarket>> {
@@ -302,7 +300,7 @@ pub fn get_accounts(executor: &impl Executor<Authenticated>) -> Result<Vec<model
 /// A Result containing UserLabDetails if successful, or an error if the API call fails.
 pub fn create_lab(
     executor: &impl Executor<Authenticated>,
-    req: model::CreateLabRequest<'_>,
+    req: model::CreateLabRequest,
 ) -> Result<model::UserLabDetails> {
     let uri = format!(
             "LabsAPI.php?channel=CREATE_LAB&scriptId={}&name={}&accountId={}&market={}&interval={}&style={}",
