@@ -143,10 +143,10 @@ pub struct HaasScriptItemWithDependencies {
 }
 
 /// Request model for lab creation.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct CreateLabRequest<'a> {
     pub script_id: &'a str,
-    pub name: String,
+    pub name: &'a str,
     pub account_id: &'a str,
     pub market: &'a str,
     pub interval: u32,
@@ -154,7 +154,7 @@ pub struct CreateLabRequest<'a> {
 }
 
 /// Enumeration for lab charts style configuation.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum HaasChartPricePlotStyle {
     CandleStick,
 }
@@ -201,7 +201,7 @@ pub struct UserAccount {
 }
 
 /// DTO with user lab details.
-#[derive(Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
 pub struct UserLabDetails {
     #[serde(rename = "C")]
     pub user_lab_config: UserLabConfig,
@@ -244,7 +244,7 @@ pub struct UserLabDetails {
 }
 
 /// Enumeration for tracking lab execution state.
-#[derive(Debug, PartialEq, serde_repr::Serialize_repr, serde_repr::Deserialize_repr)]
+#[derive(Debug, PartialEq, serde_repr::Serialize_repr, serde_repr::Deserialize_repr, Clone)]
 #[repr(u8)]
 pub enum UserLabStatus {
     Created = 0,
@@ -318,6 +318,7 @@ pub enum UserLabParameterOption {
 }
 
 /// Custom request DTO for starting lab execution
+#[derive(Clone)]
 pub struct StartLabExecutionRequest<'a> {
     pub lab_id: &'a str,
     pub start_unix: u64,
@@ -436,7 +437,7 @@ pub struct CustomReportWrapper<T> {
     pub data: T,
 }
 
-pub trait CustomReport: PartialEq + Clone {}
+pub trait CustomReport {}
 
 #[cfg(test)]
 mod tests {
