@@ -65,7 +65,9 @@
 ///     Ok(())
 /// }
 /// ```
-use crate::model::{self, CustomReport, PaginatedResponse, UserLabBacktestResult, UserLabDetails};
+use crate::model::{
+    self, AppLogin, CustomReport, PaginatedResponse, UserLabBacktestResult, UserLabDetails,
+};
 use crate::Result;
 use log;
 use reqwest::blocking::Client;
@@ -141,12 +143,18 @@ impl ReqwestExecutor<Guest> {
             .collect::<String>();
 
         let uri = format!(
-            "UserAPI.php?channel=APP_LOGIN&email={}&secretkey={}&interfaceKey={}",
+            "UserAPI.php?channel=LOGIN_WITH_CREDENTIALS&email={}&password={}&interfaceKey={}",
             email, secret_key, interface_key
         );
 
-        let resp = self.execute::<model::ApiResponse<Option<model::AppLogin>>, _>(uri)?;
+        let resp = self.execute::<model::ApiResponse<serde_json::Value>, _>(uri)?;
+        log::debug!("Resp: {resp:?}");
 
+        let uri = format!(
+            "UserAPI.php?channel=LOGIN_WITH_ONE_TIME_CODE&email={}&pincode=000000&interfaceKey={}",
+            email, interface_key
+        );
+        let resp = self.execute::<model::ApiResponse<Option<AppLogin>>, _>(uri)?;
         log::debug!("Resp: {resp:?}");
 
         let credentials = UserCredentials {

@@ -38,8 +38,9 @@ pub struct ApiResponse<T> {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 pub struct AppLogin {
-    pub is_success: bool,
+    #[serde(rename = "R")]
     pub error: i64,
+    #[serde(rename = "D")]
     pub details: UserDetails,
 }
 
