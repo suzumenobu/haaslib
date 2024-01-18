@@ -213,7 +213,6 @@ impl Executor<Authenticated> for ReqwestExecutor<Authenticated> {
     {
         let url = format!("{}://{}:{}/{}", self.protocol, self.address, self.port, uri);
 
-        log::trace!("Executing [{}]&userid=***&interfacekey=***", url);
 
         let url = self.wrap_with_credentials(url);
 

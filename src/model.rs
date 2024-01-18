@@ -347,6 +347,8 @@ impl<'a> StartLabExecutionRequest<'a> {
 /// DTO for available markets and trading pairs
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
 pub struct CloudMarket {
+    #[serde(rename = "C")]
+    pub category: String,
     #[serde(rename = "PS")]
     pub price_source: String,
     #[serde(rename = "P")]
@@ -359,15 +361,18 @@ impl std::fmt::Display for CloudMarket {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{} {}/{}",
-            self.price_source, self.primary, self.secondary
+            "{} {}/{} ({})",
+            self.price_source, self.primary, self.secondary, self.category
         )
     }
 }
 
 impl CloudMarket {
     pub fn as_market_tag(&self) -> String {
-        format!("{}_{}_{}_", self.price_source, self.primary, self.secondary)
+        format!(
+            "{}_{}_{}_{}",
+            self.price_source, self.primary, self.secondary, self.category
+        )
     }
 }
 
