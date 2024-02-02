@@ -345,7 +345,7 @@ impl<'a> StartLabExecutionRequest<'a> {
 }
 
 /// DTO for available markets and trading pairs
-#[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct CloudMarket {
     #[serde(rename = "C")]
     pub category: String,
@@ -443,6 +443,20 @@ pub struct CustomReportWrapper<T> {
 }
 
 pub trait CustomReport {}
+
+#[derive(Serialize)]
+pub struct EditHaasScriptSourceCodeSettings<'a, 'b> {
+    market_tag: CloudMarket,
+    leverage: f64,
+    position_mode: i64,
+    trade_amount: f64,
+    order_template: i64,
+    chart_style: i64,
+    interval: u32,
+    script_parameters: ScriptParameters,
+    bot_name: &'a str,
+    bot_id: &'b str,
+}
 
 #[cfg(test)]
 mod tests {

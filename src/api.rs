@@ -66,7 +66,8 @@
 /// }
 /// ```
 use crate::model::{
-    self, AppLogin, CustomReport, PaginatedResponse, UserLabBacktestResult, UserLabDetails,
+    self, AppLogin, CustomReport, EditHaasScriptSourceCodeSettings, PaginatedResponse,
+    UserLabBacktestResult, UserLabDetails,
 };
 use crate::Result;
 use log;
@@ -212,7 +213,6 @@ impl Executor<Authenticated> for ReqwestExecutor<Authenticated> {
         U: AsRef<str> + std::fmt::Display,
     {
         let url = format!("{}://{}:{}/{}", self.protocol, self.address, self.port, uri);
-
 
         let url = self.wrap_with_credentials(url);
 
@@ -419,6 +419,21 @@ where
     let url = format!(
         "LabsAPI.php?channel=GET_BACKTEST_RESULT_PAGE&labid={}&nextpageid={}&pagelength={}",
         lab_id, next_page_id, page_length
+    );
+    executor.execute(url)
+}
+
+pub fn edit_haas_script_source_code<T>(
+    executor: &impl Executor<Authenticated>,
+    script_id: &str,
+    sourcecode: &str,
+    settings: EditHaasScriptSourceCodeSettings,
+) -> Result<()> {
+    let url = format!(
+        "HaasScriptAPI.php?channel=EDIT_SCRIPT_SOURCECODE&scriptid={}&sourcecode={}&settings={}",
+        script_id,
+        urlencoding::encode(serde_json::to_string(&sourcecode)?.as_str()),
+        urlencoding::encode(serde_json::to_string(&settings)?.as_str()),
     );
     executor.execute(url)
 }
