@@ -2,6 +2,8 @@ from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel, Field
 
+T = TypeVar("T")
+
 
 class ApiResponse(BaseModel):
     success: bool = Field(alias="Success")
@@ -167,12 +169,9 @@ class CloudMarket(BaseModel):
     secondary: str = Field(alias="S")
 
 
-class PaginatedResponse(BaseModel):
-    items: list[Any] = Field(alias="I")
+class PaginatedResponse(BaseModel, Generic[T]):
+    items: list[T] = Field(alias="I")
     next_page_id: int = Field(alias="NP")
-
-
-T = TypeVar("T")
 
 
 class CustomReportWrapper(BaseModel, Generic[T]):
@@ -221,3 +220,9 @@ class EditHaasScriptSourceCodeSettings(BaseModel):
 
 class CustomReport:
     pass
+
+
+class GetBacktestResultRequest(BaseModel):
+    lab_id: str
+    next_page_id: int
+    page_lenght: int

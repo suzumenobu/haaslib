@@ -11,6 +11,7 @@ packages = [
 [tool.poetry.dependencies]
 python = "^3.10"
 pydantic = "^2.7.1"
+requests = "^2.31.0"
 
 
 [build-system]
