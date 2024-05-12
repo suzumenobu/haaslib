@@ -43,6 +43,14 @@ class BacktestPeriod:
             case BacktestPeriodType.DAY:
                 return int(self.count * 30.5)
 
+    @property
+    def start_unix(self) -> int:
+        return 0
+
+    @property
+    def end_unix(self) -> int:
+        return 1
+
 
 @dataclass
 class MarketTag:
