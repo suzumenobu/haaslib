@@ -151,6 +151,16 @@ def start_lab_execution(
     )
 
 
+def get_lab_details(
+    executor: SyncExecutor[Authenticated], lab_id: str
+) -> UserLabDetails:
+    return executor.execute(
+        uri="LabsAPI.php",
+        response_type=UserLabDetails,
+        query_params={"channel": "GET_LAB_DETAILS", "labid": lab_id},
+    )
+
+
 def update_lab_details(
     executor: SyncExecutor[Authenticated], details: UserLabDetails
 ) -> UserLabDetails:
