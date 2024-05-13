@@ -1,4 +1,4 @@
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Optional, TypeVar
 
 from pydantic import BaseModel, Field
 
@@ -8,7 +8,7 @@ T = TypeVar("T")
 class ApiResponse(BaseModel, Generic[T]):
     success: bool = Field(alias="Success")
     error: str = Field(alias="Error")
-    data: T = Field(alias="Data")
+    data: Optional[T] = Field(alias="Data")
 
 
 class UserDetails(BaseModel):
@@ -226,3 +226,44 @@ class GetBacktestResultRequest(BaseModel):
     lab_id: str
     next_page_id: int
     page_lenght: int
+
+
+class LicenseDetails(BaseModel):
+    generated: int = Field(alias="Generated")
+    license_name: str = Field(alias="LicenseName")
+    valid_until: int = Field(alias="ValidUntill")
+    rights: int = Field(alias="Rights")
+    enterprise: bool = Field(alias="Enterprise")
+    allowed_exchanges: list = Field(alias="AllowedExchanges")
+    max_bots: int = Field(alias="MaxBots")
+    max_simulated_accounts: int = Field(alias="MaxSimulatedAccounts")
+    max_real_accounts: int = Field(alias="MaxRealAccounts")
+    max_dashboards: int = Field(alias="MaxDashboards")
+    max_backtest_months: int = Field(alias="MaxBacktestMonths")
+    max_labs_months: int = Field(alias="MaxLabsMonths")
+    max_open_orders: int = Field(alias="MaxOpenOrders")
+    rented_signals: dict[str, Any] = Field(alias="RentedSignals")
+    rented_strategies: dict[str, Any] = Field(alias="RentedStrategies")
+    hire_signals_enabled: bool = Field(alias="HireSignalsEnabled")
+    hire_strategies_enabled: bool = Field(alias="HireStrategiesEnabled")
+    haas_labs_enabled: bool = Field(alias="HaasLabsEnabled")
+    resell_signals_enabled: bool = Field(alias="ResellSignalsEnabled")
+    market_details_enabled: bool = Field(alias="MarketDetailsEnabled")
+    local_api_enabled: bool = Field(alias="LocalAPIEnabled")
+    scripted_exchanges_enabled: bool = Field(alias="ScriptedExchangesEnabled")
+    machine_learning_enabled: bool = Field(alias="MachinelearningEnabled")
+
+
+class AuthenticatedSessionResponseData(BaseModel):
+    user_id: str = Field(alias="UserId")
+    username: Any = Field(alias="Username")
+    interface_secret: str = Field(alias="InterfaceSecret")
+    user_rights: int = Field(alias="UserRights")
+    is_affiliate: bool = Field(alias="IsAffiliate")
+    is_product_seller: bool = Field(alias="IsProductSeller")
+    license_details: LicenseDetails = Field(alias="LicenseDetails")
+    support_hash: Any = Field(alias="SupportHash")
+
+
+class AuthenticatedSessionResponse(BaseModel):
+    data: AuthenticatedSessionResponseData = Field(alias="D")

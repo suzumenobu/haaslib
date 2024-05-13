@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import copy
 import dataclasses
+import random
+from abc import ABC, abstractmethod, abstractproperty
 from typing import (
     Any,
     Collection,
@@ -20,6 +23,7 @@ from pydantic import BaseModel, TypeAdapter
 from haaslib.domain import HaaslibExcpetion
 from haaslib.model import (
     ApiResponse,
+    AuthenticatedSessionResponse,
     CloudMarket,
     CreateLabRequest,
     GetBacktestResultRequest,
@@ -31,8 +35,8 @@ from haaslib.model import (
     UserLabDetails,
 )
 
-State = TypeVar("State")
 ApiResponseData = TypeVar("ApiResponseData", bound=BaseModel | Collection[BaseModel])
+HaasApiEndpoint = Literal["Labs", "Account", "HaasScript", "Price", "User"]
 
 
 class HaasApiError(HaaslibExcpetion):
@@ -54,13 +58,26 @@ class Authenticated(UserState):
     interface_key: str
 
 
+State = TypeVar("State", bound=Guest | Authenticated)
+
+
 class SyncExecutor(Protocol, Generic[State]):
     def execute(
         self,
-        uri: str,
+        endpoint: HaasApiEndpoint,
         response_type: Type[ApiResponseData],
         query_params: Optional[dict] = None,
-    ) -> ApiResponseData: ...
+    ) -> ApiResponseData:
+        """
+        Executes any request to Haas API and serialized it's reponse
+
+        :param endpoint: Actual Haas API endpoint
+        :param response_type: Pydantic class for response deserialization
+        :param query_params: Endpoint parameters
+        :raises HaasApiError: If API returned any error
+        :return: API response deserialized into `response_type`
+        """
+        ...
 
 
 @dataclasses.dataclass(kw_only=True, frozen=True, slots=True)
@@ -71,67 +88,127 @@ class RequestsExecutor(Generic[State]):
     protocol: Literal["http", "https"] = dataclasses.field(default="http")
 
     def authenticate(
-        self: RequestsExecutor[Guest],
-    ) -> RequestsExecutor[Authenticated]: ...
+        self: RequestsExecutor[Guest], email: str, password: str
+    ) -> RequestsExecutor[Authenticated]:
+        """
+        Creates authenticated session in Haas API
+
+        :param email: Email used to login into Web UI
+        :param password: Password used to login into Web UI
+        :raises HaasApiError: If credentials are incorrect
+        """
+        interface_key = "".join(f"{random.randint(0, 100)}" for _ in range(10))
+        resp = self._execute_inner(
+            "User",
+            response_type=dict,
+            query_params={
+                "channel": "LOGIN_WITH_CREDENTIALS",
+                "email": email,
+                "password": password,
+                "interfaceKey": interface_key,
+            },
+        )
+        if not resp.success:
+            raise HaasApiError(resp.error or "Failed to login with credentials")
+
+        resp = self._execute_inner(
+            "User",
+            response_type=AuthenticatedSessionResponse,
+            query_params={
+                "channel": "LOGIN_WITH_ONE_TIME_CODE",
+                "email": email,
+                "pincode": random.randint(100_000, 200_000),
+                "interfaceKey": interface_key,
+            },
+        )
+        if not resp.success:
+            raise HaasApiError(resp.error or "Failed to login")
+
+        assert resp.data is not None
+
+        state = Authenticated(
+            interface_key=interface_key, user_id=resp.data.data.user_id
+        )
+
+        return RequestsExecutor(
+            host=self.host, port=self.port, state=state, protocol=self.protocol
+        )
 
     def execute(
         self,
-        uri: str,
+        endpoint: HaasApiEndpoint,
         response_type: Type[ApiResponseData],
         query_params: Optional[dict] = None,
     ) -> ApiResponseData:
+        """
+        Executes any request to Haas API and serialized it's reponse
+
+        :param endpoint: Actual Haas API endpoint
+        :param response_type: Pydantic class for response deserialization
+        :param query_params: Endpoint parameters
+        :raises HaasApiError: If API returned any error
+        :return: API response deserialized into `response_type`
+        """
         match self.state:
             case Authenticated():
                 resp = cast(
                     RequestsExecutor[Authenticated], self
-                )._execute_authenticated(uri, response_type, query_params)
+                )._execute_authenticated(endpoint, response_type, query_params)
             case Guest():
                 resp = cast(RequestsExecutor[Guest], self)._execute_guest(
-                    uri, response_type, query_params
+                    endpoint, response_type, query_params
                 )
             case _:
                 raise ValueError(f"Unknown auth state: {self.state}")
 
-        if resp.success:
-            return resp.data
+        if not resp.success:
+            raise HaasApiError(resp.error or "Request failed with empty error message")
 
-        raise HaasApiError(resp.error)
+        assert resp.data is not None
+
+        return resp.data
 
     def _execute_authenticated(
         self: RequestsExecutor[Authenticated],
-        uri: str,
+        endpoint: HaasApiEndpoint,
         response_type: Type[ApiResponseData],
         query_params: Optional[dict] = None,
     ) -> ApiResponse[ApiResponseData]:
-        return self._execute_inner(uri, response_type, query_params)
+        if query_params is None:
+            query_params = {}
+        else:
+            query_params = copy.deepcopy(query_params)
+
+        query_params["userid"] = self.state.user_id
+        query_params["interfacekey"] = self.state.interface_key
+
+        return self._execute_inner(endpoint, response_type, query_params)
 
     def _execute_guest(
         self: RequestsExecutor[Guest],
-        uri: str,
+        endpoint: HaasApiEndpoint,
         response_type: Type[ApiResponseData],
         query_params: Optional[dict] = None,
     ) -> ApiResponse[ApiResponseData]:
-        return self._execute_inner(uri, response_type, query_params)
+        return self._execute_inner(endpoint, response_type, query_params)
 
     def _execute_inner(
         self,
-        uri: str,
+        endpoint: HaasApiEndpoint,
         response_type: Type[ApiResponseData],
         query_params: Optional[dict] = None,
     ) -> ApiResponse[ApiResponseData]:
-        url = f"{self.protocol}://{self.host}:{self.port}/{uri}"
-        print(f"{url=}")
+        url = f"{self.protocol}://{self.host}:{self.port}/{endpoint}API.php"
+        print(f"Requesting {url=}")
         resp = requests.get(url, params=query_params)
+
         ta = TypeAdapter(ApiResponse[response_type])
         return ta.validate_python(resp.json())
-
-    def _wrap_with_credentials(self: RequestsExecutor[Authenticated], uri: str) -> str:
-        return ""
 
 
 def get_all_markets(executor: SyncExecutor[Any]) -> list[CloudMarket]:
     return executor.execute(
-        uri="PriceAPI.php",
+        endpoint="Price",
         response_type=list[CloudMarket],
         query_params={"channel": "MARKETLIST"},
     )
@@ -141,7 +218,7 @@ def get_all_markets_by_pricesource(
     executor: SyncExecutor[Any], price_source: str
 ) -> list[CloudMarket]:
     return executor.execute(
-        uri=f"PriceAPI.php",
+        endpoint="Price",
         response_type=list[CloudMarket],
         query_params={"channel": "MARKETLIST", "pricesource": price_source},
     )
@@ -151,7 +228,7 @@ def get_all_script_items(
     executor: SyncExecutor[Authenticated],
 ) -> list[HaasScriptItemWithDependencies]:
     return executor.execute(
-        uri="HaasScriptAPI.php",
+        endpoint="HaasScript",
         response_type=list[HaasScriptItemWithDependencies],
         query_params={"channel": "GET_ALL_SCRIPT_ITEMS"},
     )
@@ -159,7 +236,7 @@ def get_all_script_items(
 
 def get_accounts(executor: SyncExecutor[Authenticated]) -> list[UserAccount]:
     return executor.execute(
-        uri="AccountAPI.php",
+        endpoint="Account",
         response_type=list[UserAccount],
         query_params={"channel": "GET_ACCOUNTS"},
     )
@@ -169,7 +246,7 @@ def create_lab(
     executor: SyncExecutor[Authenticated], req: CreateLabRequest
 ) -> UserLabDetails:
     return executor.execute(
-        uri=f"LabsAPI.php",
+        endpoint="Labs",
         response_type=UserLabDetails,
         query_params={
             "channel": "CREATE_LAB",
@@ -187,7 +264,7 @@ def start_lab_execution(
     executor: SyncExecutor[Authenticated], req: StartLabExecutionRequest
 ) -> UserLabDetails:
     return executor.execute(
-        uri="LabsAPI.php?",
+        endpoint="Labs",
         response_type=UserLabDetails,
         query_params={
             "channel": "START_LAB_EXECUTION",
@@ -203,7 +280,7 @@ def get_lab_details(
     executor: SyncExecutor[Authenticated], lab_id: str
 ) -> UserLabDetails:
     return executor.execute(
-        uri="LabsAPI.php",
+        endpoint="Labs",
         response_type=UserLabDetails,
         query_params={"channel": "GET_LAB_DETAILS", "labid": lab_id},
     )
@@ -213,7 +290,7 @@ def update_lab_details(
     executor: SyncExecutor[Authenticated], details: UserLabDetails
 ) -> UserLabDetails:
     return executor.execute(
-        uri="LabsAPI.php",
+        endpoint="Labs",
         response_type=UserLabDetails,
         query_params={
             "channel": "UPDATE_LAB_DETAILS",
@@ -237,7 +314,7 @@ def get_backtest_result(
     executor: SyncExecutor[Authenticated], req: GetBacktestResultRequest
 ) -> PaginatedResponse[UserLabBacktestResult]:
     return executor.execute(
-        uri="LabsAPI.php",
+        endpoint="Labs",
         response_type=PaginatedResponse[UserLabBacktestResult],
         query_params={
             "channel": "GET_BACKTEST_RESULT_PAGE",
