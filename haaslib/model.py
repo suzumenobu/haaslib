@@ -5,10 +5,10 @@ from pydantic import BaseModel, Field
 T = TypeVar("T")
 
 
-class ApiResponse(BaseModel):
+class ApiResponse(BaseModel, Generic[T]):
     success: bool = Field(alias="Success")
     error: str = Field(alias="Error")
-    data: Any = Field(alias="Data")
+    data: T = Field(alias="Data")
 
 
 class UserDetails(BaseModel):

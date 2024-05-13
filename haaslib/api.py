@@ -1,12 +1,25 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, Generic, Iterable, Optional, Protocol, Type, TypeVar
+from typing import (
+    Any,
+    Collection,
+    Generic,
+    Iterable,
+    Literal,
+    Optional,
+    Protocol,
+    Type,
+    TypeVar,
+    cast,
+)
 
 import requests
-from pydantic import BaseModel
+from pydantic import BaseModel, TypeAdapter
 
-from src.model import (
+from haaslib.domain import HaaslibExcpetion
+from haaslib.model import (
+    ApiResponse,
     CloudMarket,
     CreateLabRequest,
     GetBacktestResultRequest,
@@ -19,13 +32,14 @@ from src.model import (
 )
 
 State = TypeVar("State")
-ApiResponse = TypeVar("ApiResponse")
+ApiResponseData = TypeVar("ApiResponseData", bound=BaseModel | Collection[BaseModel])
 
 
-class Executor(Protocol):
-    def execute(self): ...
+class HaasApiError(HaaslibExcpetion):
+    pass
 
 
+@dataclasses.dataclass
 class UserState:
     pass
 
@@ -44,17 +58,17 @@ class SyncExecutor(Protocol, Generic[State]):
     def execute(
         self,
         uri: str,
-        response_type: Type[ApiResponse],
+        response_type: Type[ApiResponseData],
         query_params: Optional[dict] = None,
-    ) -> ApiResponse: ...
+    ) -> ApiResponseData: ...
 
 
 @dataclasses.dataclass(kw_only=True, frozen=True, slots=True)
 class RequestsExecutor(Generic[State]):
-    address: str
+    host: str
     port: int
-    protocol: str
     state: State
+    protocol: Literal["http", "https"] = dataclasses.field(default="http")
 
     def authenticate(
         self: RequestsExecutor[Guest],
@@ -63,19 +77,53 @@ class RequestsExecutor(Generic[State]):
     def execute(
         self,
         uri: str,
-        response_type: Type[ApiResponse],
+        response_type: Type[ApiResponseData],
         query_params: Optional[dict] = None,
-    ) -> ApiResponse: ...
+    ) -> ApiResponseData:
+        match self.state:
+            case Authenticated():
+                resp = cast(
+                    RequestsExecutor[Authenticated], self
+                )._execute_authenticated(uri, response_type, query_params)
+            case Guest():
+                resp = cast(RequestsExecutor[Guest], self)._execute_guest(
+                    uri, response_type, query_params
+                )
+            case _:
+                raise ValueError(f"Unknown auth state: {self.state}")
 
-    def _excute_authenticated(
+        if resp.success:
+            return resp.data
+
+        raise HaasApiError(resp.error)
+
+    def _execute_authenticated(
         self: RequestsExecutor[Authenticated],
         uri: str,
-        response_type: Type[ApiResponse],
-    ) -> ApiResponse: ...
+        response_type: Type[ApiResponseData],
+        query_params: Optional[dict] = None,
+    ) -> ApiResponse[ApiResponseData]:
+        return self._execute_inner(uri, response_type, query_params)
 
-    def _excute_guest(
-        self: RequestsExecutor[Guest], uri: str, response_type: Type[ApiResponse]
-    ) -> ApiResponse: ...
+    def _execute_guest(
+        self: RequestsExecutor[Guest],
+        uri: str,
+        response_type: Type[ApiResponseData],
+        query_params: Optional[dict] = None,
+    ) -> ApiResponse[ApiResponseData]:
+        return self._execute_inner(uri, response_type, query_params)
+
+    def _execute_inner(
+        self,
+        uri: str,
+        response_type: Type[ApiResponseData],
+        query_params: Optional[dict] = None,
+    ) -> ApiResponse[ApiResponseData]:
+        url = f"{self.protocol}://{self.host}:{self.port}/{uri}"
+        print(f"{url=}")
+        resp = requests.get(url, params=query_params)
+        ta = TypeAdapter(ApiResponse[response_type])
+        return ta.validate_python(resp.json())
 
     def _wrap_with_credentials(self: RequestsExecutor[Authenticated], uri: str) -> str:
         return ""

@@ -2,10 +2,10 @@ import dataclasses
 import time
 from typing import Iterable, Sequence
 
-from src import api, iterable_extensions
-from src.api import Authenticated, SyncExecutor
-from src.domain import BacktestPeriod
-from src.model import (
+from haaslib import api, iterable_extensions
+from haaslib.api import Authenticated, SyncExecutor
+from haaslib.domain import BacktestPeriod
+from haaslib.model import (
     GetBacktestResultRequest,
     PaginatedResponse,
     StartLabExecutionRequest,

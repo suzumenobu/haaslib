@@ -59,3 +59,7 @@ class MarketTag:
     """
 
     tag: str
+
+
+class HaaslibExcpetion(Exception):
+    pass
