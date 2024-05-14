@@ -3,7 +3,6 @@ from __future__ import annotations
 import copy
 import dataclasses
 import random
-from abc import ABC, abstractmethod, abstractproperty
 from typing import (
     Any,
     Collection,
@@ -21,6 +20,7 @@ import requests
 from pydantic import BaseModel, TypeAdapter
 
 from haaslib.domain import HaaslibExcpetion
+from haaslib.logger import log
 from haaslib.model import (
     ApiResponse,
     AuthenticatedSessionResponse,
@@ -36,32 +36,56 @@ from haaslib.model import (
 )
 
 ApiResponseData = TypeVar("ApiResponseData", bound=BaseModel | Collection[BaseModel])
+"""Any response from Haas API should be `pydantic` model or collection of them."""
+
 HaasApiEndpoint = Literal["Labs", "Account", "HaasScript", "Price", "User"]
+"""Known Haas API endpoints"""
 
 
 class HaasApiError(HaaslibExcpetion):
+    """
+    Base Excpetion for haaslib.
+    """
+
     pass
 
 
 @dataclasses.dataclass
 class UserState:
+    """
+    Base user API Session type.
+    """
+
     pass
 
 
 class Guest(UserState):
+    """
+    Default user session type.
+    """
+
     pass
 
 
 @dataclasses.dataclass
 class Authenticated(UserState):
+    """
+    Authenticated user session required for the most of the endpoints.
+    """
+
     user_id: str
     interface_key: str
 
 
 State = TypeVar("State", bound=Guest | Authenticated)
+"""Generic to mark user session typ"""
 
 
 class SyncExecutor(Protocol, Generic[State]):
+    """
+    Main protocol for interaction with HaasAPI.
+    """
+
     def execute(
         self,
         endpoint: HaasApiEndpoint,
@@ -82,10 +106,19 @@ class SyncExecutor(Protocol, Generic[State]):
 
 @dataclasses.dataclass(kw_only=True, frozen=True, slots=True)
 class RequestsExecutor(Generic[State]):
+    """First implementation of `SyncExecutor` based on `requests` library."""
+
     host: str
+    """ Address of the Haas API."""
+
     port: int
+    """ Port of the Haas API."""
+
     state: State
-    protocol: Literal["http", "https"] = dataclasses.field(default="http")
+    """ User session state."""
+
+    protocol: Literal["http"] = dataclasses.field(default="http")
+    """Communication protocol (currently only http is valid)."""
 
     def authenticate(
         self: RequestsExecutor[Guest], email: str, password: str
@@ -199,7 +232,9 @@ class RequestsExecutor(Generic[State]):
         query_params: Optional[dict] = None,
     ) -> ApiResponse[ApiResponseData]:
         url = f"{self.protocol}://{self.host}:{self.port}/{endpoint}API.php"
-        print(f"Requesting {url=}")
+        log.debug(
+            f"[{self.state.__class__.__name__}]: Requesting {url=} with {query_params=}"
+        )
         resp = requests.get(url, params=query_params)
 
         ta = TypeAdapter(ApiResponse[response_type])
@@ -207,6 +242,13 @@ class RequestsExecutor(Generic[State]):
 
 
 def get_all_markets(executor: SyncExecutor[Any]) -> list[CloudMarket]:
+    """
+    Retrieves information about all available markets.
+
+    :param executor: Executor for Haas API interaction
+    :raises HaasApiError: If something goes wrong (Not found yet)
+    :return: List with all cloud markets
+    """
     return executor.execute(
         endpoint="Price",
         response_type=list[CloudMarket],
@@ -217,6 +259,14 @@ def get_all_markets(executor: SyncExecutor[Any]) -> list[CloudMarket]:
 def get_all_markets_by_pricesource(
     executor: SyncExecutor[Any], price_source: str
 ) -> list[CloudMarket]:
+    """
+    Retrieves information about markets from a specific price source.
+
+    :param executor: Executor for Haas API interaction
+    :param price_source: The specific price source for which market information is requested
+    :raises HaasApiError: If something goes wrong (Not found yet)
+    :return: List with cloud markets with the given `price_source`
+    """
     return executor.execute(
         endpoint="Price",
         response_type=list[CloudMarket],
@@ -224,9 +274,16 @@ def get_all_markets_by_pricesource(
     )
 
 
-def get_all_script_items(
+def get_all_scripts(
     executor: SyncExecutor[Authenticated],
 ) -> list[HaasScriptItemWithDependencies]:
+    """
+    Retrieves information about all script items for an authenticated user.
+
+    :param executor: Executor for Haas API interaction
+    :raises HaasApiError: If something goes wrong (Not found yet)
+    :return: List with all available scripts
+    """
     return executor.execute(
         endpoint="HaasScript",
         response_type=list[HaasScriptItemWithDependencies],
@@ -235,6 +292,13 @@ def get_all_script_items(
 
 
 def get_accounts(executor: SyncExecutor[Authenticated]) -> list[UserAccount]:
+    """
+    Retrieves information about user accounts for an authenticated user.
+
+    :param executor: Executor for Haas API interaction
+    :raises HaasApiError: If something goes wrong (Not found yet)
+    :return: List with all available user accounts
+    """
     return executor.execute(
         endpoint="Account",
         response_type=list[UserAccount],
@@ -245,6 +309,17 @@ def get_accounts(executor: SyncExecutor[Authenticated]) -> list[UserAccount]:
 def create_lab(
     executor: SyncExecutor[Authenticated], req: CreateLabRequest
 ) -> UserLabDetails:
+    """
+    Creates a new lab for an authenticated user.
+
+    Lab name could be duplicated
+    Market Tag could be created from `CloudMarket`
+
+    :param executor: Executor for Haas API interaction
+    :param req: Details of the lab
+    :raises HaasApiError: If something goes wrong (Not found yet)
+    :return: Created lab details
+    """
     return executor.execute(
         endpoint="Labs",
         response_type=UserLabDetails,
@@ -253,9 +328,9 @@ def create_lab(
             "scriptId": req.script_id,
             "name": req.name,
             "accountId": req.account_id,
-            "market": req.market,
+            "market": req.market.tag,
             "interval": req.interval,
-            "style": req.style,
+            "style": req.default_price_data_style,
         },
     )
 
@@ -263,6 +338,14 @@ def create_lab(
 def start_lab_execution(
     executor: SyncExecutor[Authenticated], req: StartLabExecutionRequest
 ) -> UserLabDetails:
+    """
+    Starts the execution of a lab for an authenticated user.
+
+    :param executor: Executor for Haas API interaction
+    :param req: Details for starting the lab execution
+    :raises HaasApiError: If something goes wrong (Not found yet)
+    :return: Started lab details
+    """
     return executor.execute(
         endpoint="Labs",
         response_type=UserLabDetails,
@@ -279,6 +362,14 @@ def start_lab_execution(
 def get_lab_details(
     executor: SyncExecutor[Authenticated], lab_id: str
 ) -> UserLabDetails:
+    """
+    Retrieves details about a specific lab for an authenticated user.
+
+    :param executor: Executor for Haas API interaction
+    :param lab_id: The ID of the lab for which details are requested
+    :raises HaasApiError: If lab not found
+    :return: Lab details
+    """
     return executor.execute(
         endpoint="Labs",
         response_type=UserLabDetails,
@@ -289,6 +380,14 @@ def get_lab_details(
 def update_lab_details(
     executor: SyncExecutor[Authenticated], details: UserLabDetails
 ) -> UserLabDetails:
+    """
+    Updates details for a specific lab for an authenticated user.
+
+    :param executor: Executor for Haas API interaction
+    :param details: The updated UserLabDetails for the lab.
+    :raises HaasApiError: If requested lab not found
+    :return: Updated lab details
+    """
     return executor.execute(
         endpoint="Labs",
         response_type=UserLabDetails,
@@ -307,12 +406,28 @@ def update_lab_details(
 def update_multiple_lab_details(
     executor: SyncExecutor[Authenticated], details: Iterable[UserLabDetails]
 ) -> list[UserLabDetails]:
+    """
+    Updates details for multiple labs for an authenticated user.
+
+    :param executor: Executor for Haas API interaction
+    :param details: Iterable with details to update
+    :raises HaasApiError: If requested lab not found
+    :return: Updated lab details
+    """
     return [update_lab_details(executor, detail) for detail in details]
 
 
 def get_backtest_result(
     executor: SyncExecutor[Authenticated], req: GetBacktestResultRequest
 ) -> PaginatedResponse[UserLabBacktestResult]:
+    """
+    Retrieves the backtest result for a specific lab for an authenticated user.
+
+    :param executor: Executor for Haas API interaction
+    :param req: Required info for retrieving backtest result
+    :raises HaasApiError: If requested lab not found
+    :return: Backtes result
+    """
     return executor.execute(
         endpoint="Labs",
         response_type=PaginatedResponse[UserLabBacktestResult],

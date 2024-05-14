@@ -1,21 +1,23 @@
+from __future__ import annotations
+
+import dataclasses
 import enum
-from dataclasses import dataclass
-from typing import Union
+from datetime import datetime, timedelta
 
 
-class BacktestPeriodType(enum.Enum):
-    MONTH = enum.auto()
-    DAY = enum.auto()
-
-
-@dataclass
+@dataclasses.dataclass
 class BacktestPeriod:
     """
     Custom wrapper for backtest periods in UNIX time.
     """
 
-    period_type: BacktestPeriodType
+    class Type(enum.Enum):
+        MONTH = enum.auto()
+        DAY = enum.auto()
+
+    period_type: BacktestPeriod.Type
     count: int
+    from_time: datetime = dataclasses.field(default_factory=datetime.now)
 
     def as_secs(self) -> int:
         """
@@ -25,10 +27,12 @@ class BacktestPeriod:
             int: Backtest period duration in seconds.
         """
         match self.period_type:
-            case BacktestPeriodType.MONTH:
+            case BacktestPeriod.Type.MONTH:
                 return 86400 * self.count
-            case BacktestPeriodType.DAY:
+            case BacktestPeriod.Type.DAY:
                 return int(86400 * (self.count * 30.5))
+
+        raise ValueError(f"Unknown period type: {self.period_type}")
 
     def as_days(self) -> int:
         """
@@ -38,21 +42,23 @@ class BacktestPeriod:
             int: Backtest period duration in days.
         """
         match self.period_type:
-            case BacktestPeriodType.MONTH:
+            case BacktestPeriod.Type.MONTH:
                 return self.count
-            case BacktestPeriodType.DAY:
+            case BacktestPeriod.Type.DAY:
                 return int(self.count * 30.5)
+
+        raise ValueError(f"Unknown period type: {self.period_type}")
 
     @property
     def start_unix(self) -> int:
-        return 0
+        return int(self.from_time.timestamp())
 
     @property
     def end_unix(self) -> int:
-        return 1
+        return int((self.from_time - timedelta(seconds=self.as_secs())).timestamp())
 
 
-@dataclass
+@dataclasses.dataclass
 class MarketTag:
     """
     Wrapper for market tags.

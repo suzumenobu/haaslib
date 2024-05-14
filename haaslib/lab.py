@@ -12,6 +12,7 @@ from haaslib.model import (
     UserLabBacktestResult,
     UserLabParameter,
     UserLabParameterOption,
+    UserLabStatus,
 )
 
 
@@ -41,16 +42,17 @@ def wait_for_execution(executor: SyncExecutor[Authenticated], lab_id: str):
     while True:
         details = api.get_lab_details(executor, lab_id)
         match details.status:
-            case 1:
+            case UserLabStatus.COMPLETED:
                 break
-            case 2:
+            case UserLabStatus.CANCELLED:
                 break
             case _:
                 pass
+
         time.sleep(5)
 
 
-def execute(
+def backtest(
     executor: SyncExecutor[Authenticated], lab_id: str, period: BacktestPeriod
 ) -> PaginatedResponse[UserLabBacktestResult]:
     api.start_lab_execution(

@@ -1,6 +1,9 @@
-from typing import Any, Generic, Optional, TypeVar
+import enum
+from typing import Any, Generic, Literal, Optional, TypeVar
 
 from pydantic import BaseModel, Field
+
+from haaslib.domain import MarketTag
 
 T = TypeVar("T")
 
@@ -68,13 +71,25 @@ class HaasScriptItemWithDependencies(BaseModel):
     folder_id: int = Field(alias="FID")
 
 
+PriceDataStyle = Literal[
+    "CandleStick",
+    "CandleStickHLC",
+    "HeikinAshi",
+    "OHLC",
+    "HLC",
+    "CloseLine",
+    "Line",
+    "Mountain",
+]
+
+
 class CreateLabRequest(BaseModel):
     script_id: str
     name: str
     account_id: str
-    market: str
+    market: MarketTag
     interval: int
-    style: str
+    default_price_data_style: PriceDataStyle
 
 
 class UserAccount(BaseModel):
@@ -105,20 +120,19 @@ class ScriptParameters(BaseModel):
     pass
 
 
-# TODO: Rename all in camelCase
 class HaasScriptSettings(BaseModel):
-    bot_id: str
-    bot_name: str
-    account_id: str
-    market_tag: str
-    position_mode: int
-    margin_mode: int
-    leverage: float
-    trade_amount: float
-    interval: int
-    chart_style: int
-    order_template: int
-    script_parameters: ScriptParameters
+    bot_id: str = Field(alias="botId")
+    bot_name: str = Field(alias="botName")
+    account_id: str = Field(alias="accountId")
+    market_tag: str = Field(alias="marketTag")
+    position_mode: int = Field(alias="positionMode")
+    margin_mode: int = Field(alias="marginMode")
+    leverage: float = Field(alias="leverage")
+    trade_amount: float = Field(alias="tradeAmount")
+    interval: int = Field(alias="interval")
+    chart_style: int = Field(alias="chartStyle")
+    order_template: int = Field(alias="orderTemplate")
+    script_parameters: ScriptParameters = Field(alias="scriptParameters")
 
 
 class UserLabParameterOption(BaseModel):
@@ -133,6 +147,14 @@ class UserLabParameter(BaseModel):
     is_specific: bool = Field(alias="IS")
 
 
+class UserLabStatus(enum.Enum):
+    CREATED = 0
+    QUEUED = 1
+    RUNNING = 2
+    COMPLETED = 3
+    CANCELLED = 4
+
+
 class UserLabDetails(BaseModel):
     user_lab_config: UserLabConfig = Field(alias="C")
     haas_script_settings: HaasScriptSettings = Field(alias="ST")
@@ -142,7 +164,7 @@ class UserLabDetails(BaseModel):
     script_id: str = Field(alias="SID")
     name: str = Field(alias="N")
     algorithm: int = Field(alias="T")
-    status: int = Field(alias="S")
+    status: UserLabStatus = Field(alias="S")
     scheduled_backtests: int = Field(alias="SB")
     complete_backtests: int = Field(alias="CB")
     created_at: int = Field(alias="CA")
@@ -168,6 +190,11 @@ class CloudMarket(BaseModel):
     primary: str = Field(alias="P")
     secondary: str = Field(alias="S")
 
+    def as_market_tag(self) -> MarketTag:
+        return MarketTag(
+            f"{self.price_source}_{self.primary}_{self.secondary}_{self.category}"
+        )
+
 
 class PaginatedResponse(BaseModel, Generic[T]):
     items: list[T] = Field(alias="I")
@@ -175,17 +202,16 @@ class PaginatedResponse(BaseModel, Generic[T]):
 
 
 class CustomReportWrapper(BaseModel, Generic[T]):
-    data: T = Field(alias="Custom Report")
+    data: Optional[T] = Field(alias="Custom Report", default=None)
 
 
-# FIXME: Write valid field names
 class UserLabsBacktestSummary(BaseModel, Generic[T]):
-    o: int = Field(alias="O")
-    t: int = Field(alias="T")
-    p: int = Field(alias="P")
-    fc: dict[str, float] = Field(alias="FC")
-    rp: dict[str, float] = Field(alias="RP")
-    roi: list[float] = Field(alias="ROI")
+    orders: int = Field(alias="O")
+    trades: int = Field(alias="T")
+    positions: int = Field(alias="P")
+    fee_costs: dict[str, float] = Field(alias="FC")
+    realized_profits: dict[str, float] = Field(alias="RP")
+    return_on_investment: list[float] = Field(alias="ROI")
     custom_report: CustomReportWrapper[T] = Field(alias="CR")
 
 
