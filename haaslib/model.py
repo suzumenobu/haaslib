@@ -177,6 +177,23 @@ class UserLabDetails(BaseModel):
     cancel_reason: Any = Field(alias="CM")
 
 
+class UserLabRecord(BaseModel):
+    user_id: str = Field(alias="UID")
+    lab_id: str = Field(alias="LID")
+    script_id: str = Field(alias="SID")
+    name: str = Field(alias="N")
+    scheduled_backtests: int = Field(alias="SB")
+    completed_backtests: int = Field(alias="CB")
+    created_at: int = Field(alias="CA")
+    updated_at: int = Field(alias="UA")
+    started_at: int = Field(alias="SA")
+    running_since: int = Field(alias="RS")
+    start_unix: int = Field(alias="SU")
+    end_unix: int = Field(alias="EU")
+    send_email: bool = Field(alias="SE")
+    cancel_reason: str = Field(alias="CM")
+
+
 class StartLabExecutionRequest(BaseModel):
     lab_id: str
     start_unix: int

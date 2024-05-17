@@ -16,6 +16,7 @@ from typing import (
     cast,
 )
 
+import pydantic
 import requests
 from pydantic import BaseModel, TypeAdapter
 
@@ -33,9 +34,12 @@ from haaslib.model import (
     UserAccount,
     UserLabBacktestResult,
     UserLabDetails,
+    UserLabRecord,
 )
 
-ApiResponseData = TypeVar("ApiResponseData", bound=BaseModel | Collection[BaseModel])
+ApiResponseData = TypeVar(
+    "ApiResponseData", bound=BaseModel | Collection[BaseModel] | bool
+)
 """Any response from Haas API should be `pydantic` model or collection of them."""
 
 HaasApiEndpoint = Literal["Labs", "Account", "HaasScript", "Price", "User"]
@@ -437,4 +441,33 @@ def get_backtest_result(
             "nextpageid": req.next_page_id,
             "pagelength": req.page_lenght,
         },
+    )
+
+
+def get_all_labs(executor: SyncExecutor[Authenticated]) -> list[UserLabDetails]:
+    """
+    Fetches all labs for the given session
+
+    :param executor: Executor for Haas API interaction
+    :raises HaasApiError: Not found yet
+    :return: List of the all labs details
+    """
+    return executor.execute(
+        endpoint="Labs",
+        response_type=list[UserLabRecord],
+        query_params={"channel": "GET_LABS"},
+    )
+
+
+def delete_lab(executor: SyncExecutor[Authenticated], lab_id: str):
+    """
+    Removes Lab with given id
+
+    :param executor: Executor for Haas API interaction
+    :raises HaasApiError: Not found yet
+    """
+    return executor.execute(
+        endpoint="Labs",
+        response_type=bool,
+        query_params={"channel": "DELETE_LAB", "labid": lab_id},
     )
