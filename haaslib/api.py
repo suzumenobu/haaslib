@@ -199,7 +199,20 @@ class RequestsExecutor(Generic[State]):
                 raise ValueError(f"Unknown auth state: {self.state}")
 
         if not resp.success:
-            raise HaasApiError(resp.error or "Request failed with empty error message")
+            if query_params:
+                req = {
+                    k: v
+                    for k, v in query_params.items()
+                    if k not in ("userid", "interfacekey")
+                }
+            else:
+                req = None
+
+            msg = resp.error or "[No response]"
+
+            raise HaasApiError(
+                f"Failed to request {endpoint}API with {msg}. Input params: {req}"
+            )
 
         assert resp.data is not None
 
