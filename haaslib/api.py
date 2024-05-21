@@ -16,7 +16,6 @@ from typing import (
     cast,
 )
 
-import pydantic
 import requests
 from pydantic import BaseModel, TypeAdapter
 
