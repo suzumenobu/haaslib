@@ -21,8 +21,13 @@ def main():
     )
 
     resp = api.add_bot(executor, req)
-
     print(resp)
+
+    api.delete_bot(executor, resp.bot_id)
+    print("Bot deleted")
+
+    bots = api.get_all_bots(executor)
+    print(f"Got {len(bots)} bots list: {[bot.bot_name for bot in bots]}")
 
 
 if __name__ == "__main__":

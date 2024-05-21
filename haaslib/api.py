@@ -39,7 +39,7 @@ from haaslib.model import (
 )
 
 ApiResponseData = TypeVar(
-    "ApiResponseData", bound=BaseModel | Collection[BaseModel] | bool
+    "ApiResponseData", bound=BaseModel | Collection[BaseModel] | bool | str
 )
 """Any response from Haas API should be `pydantic` model or collection of them."""
 
@@ -509,4 +509,20 @@ def add_bot(executor: SyncExecutor[Authenticated], req: CreateBotRequest) -> Haa
             "interval": req.interval,
             "chartstyle": req.chartstyle,
         },
+    )
+
+
+def delete_bot(executor: SyncExecutor[Authenticated], bot_id: str):
+    return executor.execute(
+        endpoint="Bot",
+        response_type=str,
+        query_params={"channel": "DELETE_BOT", "botid": bot_id},
+    )
+
+
+def get_all_bots(executor: SyncExecutor[Authenticated]) -> list[HaasBot]:
+    return executor.execute(
+        endpoint="Bot",
+        response_type=list[HaasBot],
+        query_params={"channel": "GET_BOTS"},
     )
