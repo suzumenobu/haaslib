@@ -69,3 +69,9 @@ class MarketTag:
 
 class HaaslibExcpetion(Exception):
     pass
+
+
+@dataclasses.dataclass
+class Script:
+    id: str
+    type: int

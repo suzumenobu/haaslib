@@ -26,8 +26,10 @@ from haaslib.model import (
     ApiResponse,
     AuthenticatedSessionResponse,
     CloudMarket,
+    CreateBotRequest,
     CreateLabRequest,
     GetBacktestResultRequest,
+    HaasBot,
     HaasScriptItemWithDependencies,
     PaginatedResponse,
     StartLabExecutionRequest,
@@ -42,7 +44,7 @@ ApiResponseData = TypeVar(
 )
 """Any response from Haas API should be `pydantic` model or collection of them."""
 
-HaasApiEndpoint = Literal["Labs", "Account", "HaasScript", "Price", "User"]
+HaasApiEndpoint = Literal["Labs", "Account", "HaasScript", "Price", "User", "Bot"]
 """Known Haas API endpoints"""
 
 
@@ -483,4 +485,28 @@ def delete_lab(executor: SyncExecutor[Authenticated], lab_id: str):
         endpoint="Labs",
         response_type=bool,
         query_params={"channel": "DELETE_LAB", "labid": lab_id},
+    )
+
+
+def add_bot(executor: SyncExecutor[Authenticated], req: CreateBotRequest) -> HaasBot:
+    """
+    Creates new bot
+
+    :param executor: Executor for Haas API interaction
+    :param req: Details of bot creation
+    """
+    return executor.execute(
+        endpoint="Bot",
+        response_type=HaasBot,
+        query_params={
+            "channel": "ADD_BOT",
+            "botname": req.bot_name,
+            "scriptid": req.script.id,
+            "scripttype": req.script.type,
+            "accountid": req.account_id,
+            "market": req.market.as_market_tag().tag,
+            "leverage": req.leverage,
+            "interval": req.interval,
+            "chartstyle": req.chartstyle,
+        },
     )

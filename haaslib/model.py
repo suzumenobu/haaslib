@@ -1,9 +1,10 @@
+import dataclasses
 import enum
 from typing import Any, Generic, Literal, Optional, TypeVar
 
 from pydantic import BaseModel, Field
 
-from haaslib.domain import MarketTag
+from haaslib.domain import MarketTag, Script
 
 T = TypeVar("T")
 
@@ -69,6 +70,14 @@ class HaasScriptItemWithDependencies(BaseModel):
     created_unix: int = Field(alias="CU")
     updated_unix: int = Field(alias="UU")
     folder_id: int = Field(alias="FID")
+
+    @property
+    def id(self) -> str:
+        return self.script_id
+
+    @property
+    def type(self) -> int:
+        return self.script_type
 
 
 PriceDataStyle = Literal[
@@ -310,3 +319,14 @@ class AuthenticatedSessionResponseData(BaseModel):
 
 class AuthenticatedSessionResponse(BaseModel):
     data: AuthenticatedSessionResponseData = Field(alias="D")
+
+
+@dataclasses.dataclass
+class CreateBotRequest:
+    bot_name: str
+    script: Script | HaasScriptItemWithDependencies
+    account_id: str
+    market: CloudMarket
+    leverage: int = dataclasses.field(default=0)
+    interval: int = dataclasses.field(default=15)
+    chartstyle: int = dataclasses.field(default=301)
