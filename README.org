@@ -1,0 +1,73 @@
+#+title: Haaslib
+#+author: suzumenbou
+
+Client for [[https://www.haasonline.com][HaasOnline]] API. Allows automation of Haas trading infrastructure.
+
+* Features
+- API Client handles communication
+- Utilities to create, execute, monitor backtests
+- Classes for key entities like markets, accounts, etc.
+- Custom result handling
+
+
+* Usage
+
+First of all it required to create ~executor~ which will interact with API:
+#+begin_src python
+from haaslib import api
+
+executor = api.RequestsExecutor(host="127.0.0.1", port=8090, state=api.Guest())
+#+end_src
+
+Guest executor can use some open endpoints, but it's better to authenticate and use all of them:
+#+begin_src python
+executor = executor.authenticate(email="admin@admin.com", password="adm2inadm4in!")
+#+end_src
+
+Now it's possible to use all provided endpoint wrappers. Let's create lab and backtest it. Lab requires market, account and script to be created, so they could be acuired in the following way:
+#+begin_src python
+import random
+
+market = random.choice(api.get_all_markets(executor))
+account = random.choice(api.get_accounts(executor))
+script = random.choice(api.get_all_scripts(executor))
+#+end_src
+
+Then we can create our lab:
+#+begin_src python
+from haaslib.model import CreateLabRequest
+
+lab_details = api.create_lab(
+    executor,
+    CreateLabRequest(
+        script_id=script.script_id,
+        name="My first lab",
+        account_id=account.account_id,
+        market=market.as_market_tag(),
+        interval=0,
+        default_price_data_style="CandleStick",
+    ),
+)
+#+end_src
+
+Now you can see in Haas Web UI (reload page if it was opened already).
+
+To start backtesting ~lab~ module could be used.
+#+begin_src python
+from haaslib import lab
+from haaslib.domain import BacktestPeriod
+
+backtesting_result = lab.backtest(
+    executor,
+    lab_details.lab_id,
+    BacktestPeriod(period_type=BacktestPeriod.Type.DAY, count=20),
+)
+#+end_src
+
+Full example lives in [[file:examples/sync_executor.py][examples/sync_executor.py]] with some other.
+
+* License
+
+This project is licensed under the MIT license.
+
+Let me know if any other sections would be useful to add or if an example should be expanded/clarified! Tried to provide basic overview and configuration to help users get started.
