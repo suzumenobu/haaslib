@@ -1,2 +1,5 @@
 /target
 /Cargo.lock
+dist/
+**__pycache__**
+pyrightconfig.json
