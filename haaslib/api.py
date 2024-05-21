@@ -493,6 +493,7 @@ def add_bot(executor: SyncExecutor[Authenticated], req: CreateBotRequest) -> Haa
 
     :param executor: Executor for Haas API interaction
     :param req: Details of bot creation
+    :return: Created bot details
     """
     return executor.execute(
         endpoint="Bot",
