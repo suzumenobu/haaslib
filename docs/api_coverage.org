@@ -1,0 +1,221 @@
+#+title: Haas API coverage
+#+author: suzumenobu
+
+* TODO Bot [3/32]
+** DONE Get bots
+CLOSED: [2024-05-21 Tue 11:21]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-05-21 Tue 11:21]
+:END:
+~get_all_bots~
+
+** DONE Delete bot
+CLOSED: [2024-05-21 Tue 11:21]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-05-21 Tue 11:21]
+:END:
+~delete_bot~
+
+** DONE Add bot
+CLOSED: [2024-05-21 Tue 11:21]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-05-21 Tue 11:21]
+:END:
+~add_bot~
+
+** TODO Get bot
+** TODO Get runtime report
+** TODO Get runtime open orders
+** TODO Get runtime open positions
+** TODO Get runtime closed positions
+** TODO Activate bot
+** TODO Deactivate bot
+** TODO Pause bot
+** TODO Resume bot
+** TODO Deactivate all bots
+** TODO Add bot from backtest
+** TODO Add bot from labs
+** TODO Edit settings
+** TODO Edit script
+** TODO Rename bot
+** TODO Change bot notes
+** TODO Favorite bot
+** TODO Clone bot
+** TODO Reset bot
+** TODO Get open orders
+** TODO Get open positions
+** TODO Cancel order
+** TODO Cancel all orders
+** TODO Get bot templates
+** TODO Get template bot
+** TODO Get template bot record
+** TODO Get template bot runtime
+** TODO Clone template bot
+** TODO Get WL report
+
+* TODO Labs [7/16]
+** DONE Delete lab
+CLOSED: [2024-05-21 Tue 11:23]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-05-21 Tue 11:23]
+:END:
+~delete_lab~
+
+** DONE Get labs
+CLOSED: [2024-05-21 Tue 11:23]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-05-21 Tue 11:23]
+:END:
+~get_all_labs~
+
+** DONE Get backtest result page
+CLOSED: [2024-05-21 Tue 11:23]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-05-21 Tue 11:23]
+:END:
+~get_backtest_result~
+
+** DONE Upate lab details
+CLOSED: [2024-05-21 Tue 11:24]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-05-21 Tue 11:24]
+:END:
+~update_lab_details~
+
+** DONE Get lab details
+CLOSED: [2024-05-21 Tue 11:24]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-05-21 Tue 11:24]
+:END:
+~get_lab_details~
+
+** DONE Create lab
+CLOSED: [2024-05-21 Tue 11:24]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-05-21 Tue 11:24]
+:END:
+~create_lab~
+
+** DONE Start lab execution
+CLOSED: [2024-05-21 Tue 11:25]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-05-21 Tue 11:25]
+:END:
+~start_lab_execution~
+
+** TODO Clone lab
+** TODO Change lab script
+** TODO Cancel lab execution
+** TODO Discard cancel reason
+** TODO Get lab execution update
+** TODO Get backtest result
+** TODO Get backtest runtime
+** TODO Get backtest chart
+** TODO Get backtest log
+
+* TODO Account [1/16]
+** DONE Get accounts
+CLOSED: [2024-05-21 Tue 11:25]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-05-21 Tue 11:25]
+:END:
+~get_accounts~
+
+** TODO Get account data
+** TODO Get balance
+** TODO Get all balances
+** TODO Get orders
+** TODO Get all orders
+** TODO Get positions
+** TODO Get all positions
+** TODO Get trades
+** TODO Get position mode
+** TODO Get Margin settings
+** TODO Deposit funds
+** TODO Withdrawl funds
+** TODO Start auth
+** TODO Is auth completed
+** TODO Complete tradestation auth
+
+* TODO HaasScript [1/37]
+** DONE Get all script items
+CLOSED: [2024-05-21 Tue 11:25]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-05-21 Tue 11:25]
+:END:
+~get_all_scripts~
+
+** TODO Get commands
+** TODO Get script item
+** TODO Get script commands
+** TODO Get script record
+** TODO Get all script records
+** TODO Add script
+** TODO Add script enterprise
+** TODO Edit script
+** TODO Edit script enterprise
+** TODO Edit script sourcecode
+** TODO Edit script sourcecode enterprise
+** TODO Create execution package for enterprise
+** TODO Edit script specifications
+** TODO Get script execution package
+** TODO Delete script
+** TODO Publish script
+** TODO Publsih community script
+** TODO Unpublish script
+** TODO Get backup versions
+** TODO Create new backup
+** TODO Restore backup
+** TODO Get backup
+** TODO Search in scripts
+** TODO Share script
+** TODO Get latest shared script
+** TODO Get shared script
+** TODO Get shared script with auth
+** TODO Save shared script
+** TODO Shared script forked
+** TODO Shared script downloaded
+** TODO Delete shared script
+** TODO Get all script folders
+** TODO Create folder
+** TODO Edit folder
+** TODO Delete folder
+** TODO Move script to folder
+
+* TODO Price [1/23]
+** DONE Marketlist
+CLOSED: [2024-05-21 Tue 11:22]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-05-21 Tue 11:22]
+:END:
+~get_all_markets~
+~get_all_markets_by_pricesource~
+
+** TODO Time
+** TODO All pricesources
+** TODO Pricesources
+** TODO All markets
+** TODO Unique marketlist
+** TODO Markets
+** TODO Trade markets
+** TODO Trade market
+** TODO Coin list
+** TODO Price
+** TODO Last minute tick
+** TODO Specific tic
+** TODO Oldest tick
+** TODO Order book
+** TODO Last trades
+** TODO Sync ticks
+** TODO Last ticks
+** TODO Deep ticks
+** TODO Snapshot
+** TODO Custom snapshot last tick
+** TODO Custom snapshot minute tick
+** TODO Fiat conversions
+
+* TODO User [0/4]
+** TODO App login
+** TODO Check token
+** TODO Logout
+** TODO Is device approved
