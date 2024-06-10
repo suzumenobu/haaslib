@@ -292,6 +292,11 @@ def get_all_markets_by_pricesource(
     )
 
 
+def get_unique_pricesources(executor: SyncExecutor[Any]) -> set[str]:
+    all_markets = get_all_markets(executor)
+    return set(m.price_source for m in all_markets)
+
+
 def get_all_scripts(
     executor: SyncExecutor[Authenticated],
 ) -> list[HaasScriptItemWithDependencies]:
