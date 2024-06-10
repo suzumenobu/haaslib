@@ -480,7 +480,7 @@ def get_all_labs(executor: SyncExecutor[Authenticated]) -> list[UserLabDetails]:
     """
     return executor.execute(
         endpoint="Labs",
-        response_type=list[UserLabRecord],
+        response_type=list[UserLabRecord],  # type: ignore
         query_params={"channel": "GET_LABS"},
     )
 
