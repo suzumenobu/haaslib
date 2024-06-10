@@ -1,6 +1,6 @@
 import dataclasses
 import enum
-from typing import Any, Generic, Literal, Optional, TypeVar
+from typing import Any, Generic, Literal, Optional, Self, Type, TypeVar
 
 from pydantic import BaseModel, Field
 
@@ -92,13 +92,33 @@ PriceDataStyle = Literal[
 ]
 
 
-class CreateLabRequest(BaseModel):
+@dataclasses.dataclass
+class CreateLabRequest:
     script_id: str
     name: str
     account_id: str
     market: MarketTag
     interval: int
     default_price_data_style: PriceDataStyle
+
+    @classmethod
+    def with_generated_name(
+        cls: Type[Self],
+        script_id: str,
+        account_id: str,
+        market: MarketTag,
+        interval: int,
+        default_price_data_style: PriceDataStyle,
+    ) -> Self:
+        name = f"{interval}_{market.tag}_{script_id}_{account_id}"
+        return cls(
+            script_id=script_id,
+            account_id=account_id,
+            market=market,
+            interval=interval,
+            default_price_data_style=default_price_data_style,
+            name=name,
+        )
 
 
 class UserAccount(BaseModel):
