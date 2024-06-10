@@ -293,6 +293,13 @@ def get_all_markets_by_pricesource(
 
 
 def get_unique_pricesources(executor: SyncExecutor[Any]) -> set[str]:
+    """
+    Returns all unique price sources
+
+    :param executor: Executor for Haas API interaction
+    :raises HaasApiError: If something goes wrong (Not found yet)
+    :return: Set of price sources
+    """
     all_markets = get_all_markets(executor)
     return set(m.price_source for m in all_markets)
 
