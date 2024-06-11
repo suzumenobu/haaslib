@@ -164,8 +164,7 @@ class HaasScriptSettings(BaseModel):
     script_parameters: ScriptParameters = Field(alias="scriptParameters")
 
 
-class UserLabParameterOption(BaseModel):
-    value: str | int | float | bool
+UserLabParameterOption = str | int | float | bool
 
 
 class UserLabParameter(BaseModel):
