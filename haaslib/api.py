@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import dataclasses
+import json
 import random
 from typing import (
     Any,
@@ -17,7 +18,8 @@ from typing import (
 )
 
 import requests
-from pydantic import BaseModel, TypeAdapter
+from pydantic import BaseModel, TypeAdapter, ValidationError
+from pydantic.json import pydantic_encoder
 
 from haaslib.domain import HaaslibExcpetion
 from haaslib.logger import log
@@ -253,10 +255,43 @@ class RequestsExecutor(Generic[State]):
         log.debug(
             f"[{self.state.__class__.__name__}]: Requesting {url=} with {query_params=}"
         )
+        if query_params:
+            query_params = query_params.copy()
+            for key in query_params.keys():
+                value = query_params[key]
+                if isinstance(value, (str, int, float, bool, type(None))):
+                    continue
+
+                if isinstance(value, list):
+                    log.debug(f"Converting to JSON string list `{key}` field")
+                    query_params[key] = json.dumps(
+                        value, default=self._custom_encoder(by_alias=True)
+                    )
+
+                if isinstance(value, BaseModel):
+                    log.debug(f"Converting to JSON string pydantic `{key}` field")
+                    query_params[key] = value.model_dump_json()
+
         resp = requests.get(url, params=query_params)
+        resp.raise_for_status()
 
         ta = TypeAdapter(ApiResponse[response_type])
-        return ta.validate_python(resp.json())
+
+        try:
+            return ta.validate_python(resp.json())
+        except ValidationError:
+            log.error(f"Failed to request: {resp.content}")
+            raise
+
+    @staticmethod
+    def _custom_encoder(**kwargs):
+        def base_encoder(obj):
+            if isinstance(obj, BaseModel):
+                return obj.model_dump(**kwargs)
+            else:
+                return pydantic_encoder(obj)
+
+        return base_encoder
 
 
 def get_all_markets(executor: SyncExecutor[Any]) -> list[CloudMarket]:
