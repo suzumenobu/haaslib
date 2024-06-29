@@ -1,11 +1,14 @@
 import dataclasses
+import random
 import time
-from typing import Iterable, Sequence
+from contextlib import contextmanager
+from typing import Generator, Iterable, Sequence
 
 from haaslib import api, iterable_extensions
 from haaslib.api import Authenticated, SyncExecutor
-from haaslib.domain import BacktestPeriod
+from haaslib.domain import BacktestPeriod, MarketTag
 from haaslib.model import (
+    CreateLabRequest,
     GetBacktestResultRequest,
     PaginatedResponse,
     StartLabExecutionRequest,
@@ -71,3 +74,34 @@ def backtest(
         executor,
         GetBacktestResultRequest(lab_id=lab_id, next_page_id=0, page_lenght=1_000_000),
     )
+
+
+@contextmanager
+def get_lab_default_params(
+    executor: SyncExecutor[Authenticated], script_id: str
+) -> Generator[list[UserLabParameter], None, None]:
+    """
+    Creates buffer lab to get it's default parameters options
+
+    :param executor: Executor for Haas API interaction
+    :param script_id: Script of lab
+    """
+    accounts = api.get_accounts(executor)
+    account = random.choice(accounts)
+
+    markets = api.get_all_markets(executor)
+    market = random.choice(markets)
+
+    req = CreateLabRequest(
+        script_id=script_id,
+        name="buf_lab",
+        account_id=account.id,
+        market=market.as_market_tag(),
+        interval=1,
+        default_price_data_style="CandleStick",
+    )
+    lab_details = api.create_lab(executor, req)
+
+    yield lab_details.parameters
+
+    api.delete_lab(executor, lab_details.lab_id)
