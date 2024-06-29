@@ -95,7 +95,7 @@ def get_lab_default_params(
     req = CreateLabRequest(
         script_id=script_id,
         name="buf_lab",
-        account_id=account.id,
+        account_id=account.account_id,
         market=market.as_market_tag(),
         interval=1,
         default_price_data_style="CandleStick",
