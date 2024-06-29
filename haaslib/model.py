@@ -150,10 +150,10 @@ class ScriptParameters(BaseModel):
 
 
 class HaasScriptSettings(BaseModel):
-    bot_id: str = Field(alias="botId")
-    bot_name: str = Field(alias="botName")
-    account_id: str = Field(alias="accountId")
-    market_tag: str = Field(alias="marketTag")
+    bot_id: Optional[str] = Field(alias="botId")
+    bot_name: Optional[str] = Field(alias="botName")
+    account_id: Optional[str] = Field(alias="accountId")
+    market_tag: Optional[str] = Field(alias="marketTag")
     position_mode: int = Field(alias="positionMode")
     margin_mode: int = Field(alias="marginMode")
     leverage: float = Field(alias="leverage")
@@ -161,7 +161,7 @@ class HaasScriptSettings(BaseModel):
     interval: int = Field(alias="interval")
     chart_style: int = Field(alias="chartStyle")
     order_template: int = Field(alias="orderTemplate")
-    script_parameters: ScriptParameters = Field(alias="scriptParameters")
+    script_parameters: Optional[ScriptParameters] = Field(alias="scriptParameters")
 
 
 UserLabParameterOption = str | int | float | bool
@@ -349,3 +349,46 @@ class CreateBotRequest:
     leverage: int = dataclasses.field(default=0)
     interval: int = dataclasses.field(default=15)
     chartstyle: int = dataclasses.field(default=301)
+
+
+class EnumDecimalType(BaseModel):
+    # Define the fields for EnumDecimalType here
+    pass
+
+
+class CloudTradeContract(BaseModel):
+    # Define the fields for CloudTradeContract here
+    pass
+
+
+class CloudTradeMarket(BaseModel):
+    normalized_primary: str = Field(alias="NormalizedPrimary")
+    normalized_secondary: str = Field(alias="NormalizedSecondary")
+    normalized_margin_currency: str = Field(alias="NormalizedMarginCurrency")
+    exchange_symbol: str = Field(alias="ES")
+    web_socket_symbol: str = Field(alias="WS")
+    exchange_value: int = Field(alias="EV")
+    price_step: float = Field(alias="PSP")
+    price_decimals: int = Field(alias="PD")
+    amount_step: float = Field(alias="ASP")
+    amount_decimals: int = Field(alias="AD")
+    price_decimal_type: EnumDecimalType = Field(alias="PDT")
+    amount_decimal_type: EnumDecimalType = Field(alias="ADT")
+    makers_fee: float = Field(alias="MF")
+    takers_fee: float = Field(alias="TF")
+    minimum_trade_amount: float = Field(alias="MTA")
+    minimum_trade_volume: float = Field(alias="MTV")
+    maximum_trade_amount: float = Field(alias="MXTA")
+    maximum_trade_volume: float = Field(alias="MXTV")
+    is_open: bool = Field(alias="IO")
+    is_margin: bool = Field(alias="IM")
+    contract_details: CloudTradeContract = Field(alias="CD")
+    margin_currency: str = Field(alias="MarginCurrency")
+    amount_label: str = Field(alias="AmountLabel")
+    profit_label: str = Field(alias="ProfitLabel")
+    price_source: str = Field(alias="PS")
+    primary: str = Field(alias="P")
+    secondary: str = Field(alias="S")
+    contract_name: str = Field(alias="C")
+    short_name: str = Field(alias="ShortName")
+    wallet_tag: str = Field(alias="WalletTag")
