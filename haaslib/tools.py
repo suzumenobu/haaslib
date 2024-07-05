@@ -27,4 +27,8 @@ def select_random_markets(
         filtered_markets = [m for m in all_markets if filterer(m)]
     else:
         filtered_markets = all_markets
+
+    if count >= len(filtered_markets):
+        return filtered_markets
+
     return random.sample(filtered_markets, count)
