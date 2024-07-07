@@ -270,7 +270,7 @@ class RequestsExecutor(Generic[State]):
 
                 if isinstance(value, BaseModel):
                     log.debug(f"Converting to JSON string pydantic `{key}` field")
-                    query_params[key] = value.model_dump_json()
+                    query_params[key] = value.model_dump_json(by_alias=True)
 
         resp = requests.get(url, params=query_params)
         resp.raise_for_status()
