@@ -24,6 +24,7 @@ from pydantic.json import pydantic_encoder
 from haaslib.domain import HaaslibExcpetion
 from haaslib.logger import log
 from haaslib.model import (
+    AddBotFromLabRequest,
     ApiResponse,
     AuthenticatedSessionResponse,
     CloudMarket,
@@ -555,6 +556,27 @@ def add_bot(executor: SyncExecutor[Authenticated], req: CreateBotRequest) -> Haa
             "leverage": req.leverage,
             "interval": req.interval,
             "chartstyle": req.chartstyle,
+        },
+    )
+
+
+def add_bot_from_lab(executor: SyncExecutor[Authenticated], req: AddBotFromLabRequest):
+    """
+    Creates new bot from given lab's backtest
+
+    :param executor: Executor for Haas API interaction
+    :param req: Details of bot creation
+    """
+    executor.execute(
+        endpoint="Bot",
+        response_type=dict,
+        query_params={
+            "labid": req.lab_id,
+            "backtestid": req.backtest_id,
+            "botname": req.bot_name,
+            "accountid": req.account_id,
+            "market": req.market.as_market_tag().tag,
+            "leverage": req.leverage,
         },
     )
 

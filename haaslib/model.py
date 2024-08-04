@@ -392,3 +392,13 @@ class CloudTradeMarket(BaseModel):
     contract_name: str = Field(alias="C")
     short_name: str = Field(alias="ShortName")
     wallet_tag: str = Field(alias="WalletTag")
+
+
+@dataclasses.dataclass
+class AddBotFromLabRequest:
+    lab_id: str
+    backtest_id: str
+    bot_name: str
+    account_id: str
+    market: CloudMarket
+    leverage: int = 0
