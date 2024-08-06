@@ -560,17 +560,20 @@ def add_bot(executor: SyncExecutor[Authenticated], req: CreateBotRequest) -> Haa
     )
 
 
-def add_bot_from_lab(executor: SyncExecutor[Authenticated], req: AddBotFromLabRequest):
+def add_bot_from_lab(
+    executor: SyncExecutor[Authenticated], req: AddBotFromLabRequest
+) -> HaasBot:
     """
     Creates new bot from given lab's backtest
 
     :param executor: Executor for Haas API interaction
     :param req: Details of bot creation
     """
-    executor.execute(
+    return executor.execute(
         endpoint="Bot",
-        response_type=dict,
+        response_type=HaasBot,
         query_params={
+            "channel": "ADD_BOT_FROM_LABS",
             "labid": req.lab_id,
             "backtestid": req.backtest_id,
             "botname": req.bot_name,
