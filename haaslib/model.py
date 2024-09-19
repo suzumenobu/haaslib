@@ -54,6 +54,8 @@ class HaasBot(BaseModel):
     is_white_label: bool = Field(alias="IWL")
     master_bot_id: str = Field(alias="MBID")
     followers: int = Field(alias="F")
+    is_paused: bool = Field(alias="IsPaused")
+    last_error: Optional[str] = Field(alias="LastError")
 
 
 class HaasScriptItemWithDependencies(BaseModel):
@@ -402,3 +404,86 @@ class AddBotFromLabRequest:
     account_id: str
     market: CloudMarket
     leverage: int = 0
+
+
+class BotOrder(BaseModel):
+    order_id: str = Field(alias="OrderId")
+    bot_id: str = Field(alias="BotId")
+    market: str = Field(alias="Market")
+    order_type: str = Field(alias="OrderType")
+    amount: float = Field(alias="Amount")
+    price: float = Field(alias="Price")
+    status: str = Field(alias="Status")
+    created_at: int = Field(alias="CreatedAt")
+
+
+class BotPosition(BaseModel):
+    position_id: str = Field(alias="PositionId")
+    bot_id: str = Field(alias="BotId")
+    market: str = Field(alias="Market")
+    position_type: str = Field(alias="PositionType")
+    amount: float = Field(alias="Amount")
+    entry_price: float = Field(alias="EntryPrice")
+    current_price: float = Field(alias="CurrentPrice")
+    profit_loss: float = Field(alias="ProfitLoss")
+    opened_at: int = Field(alias="OpenedAt")
+
+
+class BotRuntimeReport(BaseModel):
+    bot_id: str = Field(alias="BotId")
+    total_profit: float = Field(alias="TotalProfit")
+    total_trades: int = Field(alias="TotalTrades")
+    win_rate: float = Field(alias="WinRate")
+    current_balance: float = Field(alias="CurrentBalance")
+    last_trade_time: int = Field(alias="LastTradeTime")
+
+
+class BotResetConfig(BaseModel):
+    reset_trades: bool = Field(alias="ResetTrades")
+    reset_orders: bool = Field(alias="ResetOrders")
+
+# Add these new imports if not already present
+from typing import List, Optional, Any
+from pydantic import BaseModel, Field
+
+# ... existing code ...
+
+class UserLabRecord(BaseModel):
+    lab_id: str = Field(alias="LabId")
+    name: str = Field(alias="Name")
+    script_id: str = Field(alias="ScriptId")
+    created_at: int = Field(alias="CreatedAt")
+    updated_at: int = Field(alias="UpdatedAt")
+
+class BacktestResult(BaseModel):
+    backtest_id: str = Field(alias="BacktestId")
+    start_time: int = Field(alias="StartTime")
+    end_time: int = Field(alias="EndTime")
+    total_trades: int = Field(alias="TotalTrades")
+    winning_trades: int = Field(alias="WinningTrades")
+    losing_trades: int = Field(alias="LosingTrades")
+    profit: float = Field(alias="Profit")
+    roi: float = Field(alias="ROI")
+
+class BacktestRuntime(BaseModel):
+    backtest_id: str = Field(alias="BacktestId")
+    start_time: int = Field(alias="StartTime")
+    end_time: int = Field(alias="EndTime")
+    progress: float = Field(alias="Progress")
+    current_balance: float = Field(alias="CurrentBalance")
+
+class BacktestChart(BaseModel):
+    backtest_id: str = Field(alias="BacktestId")
+    chart_data: Any = Field(alias="ChartData")  # Replace Any with a more specific type if known
+
+class BacktestLog(BaseModel):
+    timestamp: int = Field(alias="Timestamp")
+    message: str = Field(alias="Message")
+    level: str = Field(alias="Level")
+
+# ... rest of the existing code ...
+
+
+class EnumDecimalType(BaseModel):
+    # Define the fields for EnumDecimalType here
+    pass
