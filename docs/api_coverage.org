@@ -1,29 +1,47 @@
 #+title: Haas API coverage
 #+author: suzumenobu
 
-* Bot [18/32]
+* TODO Bot [3/32]
 ** DONE Get bots
+CLOSED: [2024-05-21 Tue 11:21]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-05-21 Tue 11:21]
+:END:
+~get_all_bots~
+
 ** DONE Delete bot
+CLOSED: [2024-05-21 Tue 11:21]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-05-21 Tue 11:21]
+:END:
+~delete_bot~
+
 ** DONE Add bot
-** DONE Get bot
-** DONE Get runtime report
-** DONE Get runtime open orders
-** DONE Get runtime open positions
-** DONE Get runtime closed positions
-** DONE Activate bot
-** DONE Deactivate bot
-** DONE Pause bot
-** DONE Resume bot
+CLOSED: [2024-05-21 Tue 11:21]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-05-21 Tue 11:21]
+:END:
+~add_bot~
+
+** TODO Get bot
+** TODO Get runtime report
+** TODO Get runtime open orders
+** TODO Get runtime open positions
+** TODO Get runtime closed positions
+** TODO Activate bot
+** TODO Deactivate bot
+** TODO Pause bot
+** TODO Resume bot
 ** TODO Deactivate all bots
-** DONE Add bot from backtest
-** DONE Add bot from labs
-** DONE Edit settings
-** DONE Edit script
-** DONE Rename bot
+** TODO Add bot from backtest
+** TODO Add bot from labs
+** TODO Edit settings
+** TODO Edit script
+** TODO Rename bot
 ** TODO Change bot notes
 ** TODO Favorite bot
 ** TODO Clone bot
-** DONE Reset bot
+** TODO Reset bot
 ** TODO Get open orders
 ** TODO Get open positions
 ** TODO Cancel order
@@ -35,44 +53,98 @@
 ** TODO Clone template bot
 ** TODO Get WL report
 
-* Labs [16/16]
+* TODO Labs [7/16]
 ** DONE Delete lab
+CLOSED: [2024-05-21 Tue 11:23]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-05-21 Tue 11:23]
+:END:
+~delete_lab~
+
 ** DONE Get labs
+CLOSED: [2024-05-21 Tue 11:23]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-05-21 Tue 11:23]
+:END:
+~get_all_labs~
+
 ** DONE Get backtest result page
-** DONE Update lab details
+CLOSED: [2024-05-21 Tue 11:23]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-05-21 Tue 11:23]
+:END:
+~get_backtest_result~
+
+** DONE Upate lab details
+CLOSED: [2024-05-21 Tue 11:24]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-05-21 Tue 11:24]
+:END:
+~update_lab_details~
+
 ** DONE Get lab details
+CLOSED: [2024-05-21 Tue 11:24]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-05-21 Tue 11:24]
+:END:
+~get_lab_details~
+
 ** DONE Create lab
+CLOSED: [2024-05-21 Tue 11:24]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-05-21 Tue 11:24]
+:END:
+~create_lab~
+
 ** DONE Start lab execution
-** DONE Clone lab
-** DONE Change lab script
-** DONE Cancel lab execution
-** DONE Discard cancel reason
-** DONE Get lab execution update
-** DONE Get backtest result
-** DONE Get backtest runtime
-** DONE Get backtest chart
-** DONE Get backtest log
+CLOSED: [2024-05-21 Tue 11:25]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-05-21 Tue 11:25]
+:END:
+~start_lab_execution~
 
-* Account [16/16]
+** TODO Clone lab
+** TODO Change lab script
+** TODO Cancel lab execution
+** TODO Discard cancel reason
+** TODO Get lab execution update
+** TODO Get backtest result
+** TODO Get backtest runtime
+** TODO Get backtest chart
+** TODO Get backtest log
+
+* TODO Account [1/16]
 ** DONE Get accounts
-** DONE Get account data
-** DONE Get balance
-** DONE Get all balances
-** DONE Get orders
-** DONE Get all orders
-** DONE Get positions
-** DONE Get all positions
-** DONE Get trades
-** DONE Get position mode
-** DONE Get Margin settings
-** DONE Deposit funds
-** DONE Withdrawal funds
-** DONE Start auth
-** DONE Is auth completed
-** DONE Complete tradestation auth
+CLOSED: [2024-05-21 Tue 11:25]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-05-21 Tue 11:25]
+:END:
+~get_accounts~
 
-* HaasScript [1/37]
+** TODO Get account data
+** TODO Get balance
+** TODO Get all balances
+** TODO Get orders
+** TODO Get all orders
+** TODO Get positions
+** TODO Get all positions
+** TODO Get trades
+** TODO Get position mode
+** TODO Get Margin settings
+** TODO Deposit funds
+** TODO Withdrawl funds
+** TODO Start auth
+** TODO Is auth completed
+** TODO Complete tradestation auth
+
+* TODO HaasScript [1/37]
 ** DONE Get all script items
+CLOSED: [2024-05-21 Tue 11:25]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-05-21 Tue 11:25]
+:END:
+~get_all_scripts~
+
 ** TODO Get commands
 ** TODO Get script item
 ** TODO Get script commands
@@ -89,7 +161,7 @@
 ** TODO Get script execution package
 ** TODO Delete script
 ** TODO Publish script
-** TODO Publish community script
+** TODO Publsih community script
 ** TODO Unpublish script
 ** TODO Get backup versions
 ** TODO Create new backup
@@ -110,48 +182,40 @@
 ** TODO Delete folder
 ** TODO Move script to folder
 
-* Price [23/23]
+* TODO Price [1/23]
 ** DONE Marketlist
-** DONE Time
-** DONE All pricesources
-** DONE Pricesources
-** DONE All markets
-** DONE Unique marketlist
-** DONE Markets
-** DONE Trade markets
-** DONE Trade market
-** DONE Coin list
-** DONE Price
-** DONE Last minute tick
-** DONE Specific tick
-** DONE Oldest tick
-** DONE Order book
-** DONE Last trades
-** DONE Sync ticks
-** DONE Last ticks
-** DONE Deep ticks
-** DONE Snapshot
-** DONE Custom snapshot last tick
-** DONE Custom snapshot minute tick
-** DONE Fiat conversions
+CLOSED: [2024-05-21 Tue 11:22]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-05-21 Tue 11:22]
+:END:
+~get_all_markets~
+~get_all_markets_by_pricesource~
 
-* User [4/4]
-** DONE App login
-** DONE Check token
-** DONE Logout
-** DONE Is device approved
+** TODO Time
+** TODO All pricesources
+** TODO Pricesources
+** TODO All markets
+** TODO Unique marketlist
+** TODO Markets
+** TODO Trade markets
+** TODO Trade market
+** TODO Coin list
+** TODO Price
+** TODO Last minute tick
+** TODO Specific tic
+** TODO Oldest tick
+** TODO Order book
+** TODO Last trades
+** TODO Sync ticks
+** TODO Last ticks
+** TODO Deep ticks
+** TODO Snapshot
+** TODO Custom snapshot last tick
+** TODO Custom snapshot minute tick
+** TODO Fiat conversions
 
-* Portfolio [2/2]
-** DONE Convert
-** DONE Get balance mutations
-
-* Signal [2/2]
-** DONE Store signal
-** DONE My signals
-
-* Trading [5/5]
-** DONE Place order
-** DONE Cancel order
-** DONE Used margin
-** DONE Max amount
-** DONE Cancel all open orders
+* TODO User [0/4]
+** TODO App login
+** TODO Check token
+** TODO Logout
+** TODO Is device approved

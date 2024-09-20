@@ -21,8 +21,7 @@ import requests
 from pydantic import BaseModel, TypeAdapter, ValidationError
 from pydantic.json import pydantic_encoder
 
-from haaslib.exceptions import HaasApiError, HaasApiRateLimitError, HaasApiAuthenticationError
-from haaslib.config import config
+from haaslib.domain import HaaslibExcpetion
 from haaslib.logger import log
 from haaslib.model import (
     AddBotFromLabRequest,
@@ -39,10 +38,7 @@ from haaslib.model import (
     UserAccount,
     UserLabBacktestResult,
     UserLabDetails,
-    UserLabDetails,
     UserLabRecord,
-    BotOrder, BotPosition, BotRuntimeReport, BotResetConfig,
-    BotOrderList, BotPositionList, BotClosedPositionList
 )
 
 ApiResponseData = TypeVar(
@@ -52,6 +48,14 @@ ApiResponseData = TypeVar(
 
 HaasApiEndpoint = Literal["Labs", "Account", "HaasScript", "Price", "User", "Bot"]
 """Known Haas API endpoints"""
+
+
+class HaasApiError(HaaslibExcpetion):
+    """
+    Base Excpetion for haaslib.
+    """
+
+    pass
 
 
 @dataclasses.dataclass
@@ -580,7 +584,7 @@ def add_bot_from_lab(
     )
 
 
-def delete_bot(executor: SyncExecutor[Authenticated], bot_id: str) -> str:
+def delete_bot(executor: SyncExecutor[Authenticated], bot_id: str):
     return executor.execute(
         endpoint="Bot",
         response_type=str,
@@ -594,280 +598,3 @@ def get_all_bots(executor: SyncExecutor[Authenticated]) -> list[HaasBot]:
         response_type=list[HaasBot],
         query_params={"channel": "GET_BOTS"},
     )
-
-
-def get_bot(executor: SyncExecutor[Authenticated], bot_id: str) -> HaasBot:
-    """
-    Retrieves details about a specific bot for an authenticated user.
-
-    :param executor: Executor for Haas API interaction
-    :param bot_id: The ID of the bot for which details are requested
-    :raises HaasApiError: If bot not found
-    :return: Bot details
-    """
-    return executor.execute(
-        endpoint="Bot",
-        response_type=HaasBot,
-        query_params={"channel": "GET_BOT", "botid": bot_id},
-    )
-
-
-def activate_bot(executor: SyncExecutor[Authenticated], bot_id: str, clean_reports: bool = False) -> bool:
-    """
-    Activates a specific bot for an authenticated user.
-
-    :param executor: Executor for Haas API interaction
-    :param bot_id: The ID of the bot to activate
-    :param clean_reports: Whether to clean reports when activating the bot
-    :raises HaasApiError: If bot activation fails
-    :return: True if activation was successful
-    """
-    return executor.execute(
-        endpoint="Bot",
-        response_type=bool,
-        query_params={
-            "channel": "ACTIVATE_BOT",
-            "botid": bot_id,
-            "cleanreports": clean_reports,
-        },
-    )
-
-
-def deactivate_bot(executor: SyncExecutor[Authenticated], bot_id: str, cancel_orders: bool = False) -> bool:
-    """
-    Deactivates a specific bot for an authenticated user.
-
-    :param executor: Executor for Haas API interaction
-    :param bot_id: The ID of the bot to deactivate
-    :param cancel_orders: Whether to cancel open orders when deactivating the bot
-    :raises HaasApiError: If bot deactivation fails
-    :return: True if deactivation was successful
-    """
-    return executor.execute(
-        endpoint="Bot",
-        response_type=bool,
-        query_params={
-            "channel": "DEACTIVATE_BOT",
-            "botid": bot_id,
-            "cancelorders": cancel_orders,
-        },
-    )
-
-
-def edit_bot_settings(executor: SyncExecutor[Authenticated], bot_id: str, settings: dict) -> HaasBot:
-    """
-    Edits the settings of a specific bot for an authenticated user.
-
-    :param executor: Executor for Haas API interaction
-    :param bot_id: The ID of the bot to edit
-    :param settings: A dictionary containing the settings to update
-    :raises HaasApiError: If bot settings update fails
-    :return: Updated bot details
-    """
-    return executor.execute(
-        endpoint="Bot",
-        response_type=HaasBot,
-        query_params={
-            "channel": "EDIT_SETTINGS",
-            "botid": bot_id,
-            "settings": json.dumps(settings),
-        },
-    )
-
-
-def get_bot_runtime_report(executor: SyncExecutor[Authenticated], bot_id: str) -> BotRuntimeReport:
-    """
-    Retrieves the runtime report for a specific bot.
-
-    :param executor: Executor for Haas API interaction
-    :param bot_id: The ID of the bot for which to retrieve the runtime report
-    :raises HaasApiError: If retrieval fails
-    :return: Bot runtime report
-    """
-    return executor.execute(
-        endpoint="Bot",
-        response_type=BotRuntimeReport,
-        query_params={
-            "channel": "GET_RUNTIME_REPORT",
-            "botid": bot_id,
-        },
-    )
-
-
-def get_bot_open_orders(executor: SyncExecutor[Authenticated], bot_id: str) -> BotOrderList:
-    """
-    Retrieves the open orders for a specific bot.
-
-    :param executor: Executor for Haas API interaction
-    :param bot_id: The ID of the bot for which to retrieve the open orders
-    :raises HaasApiError: If retrieval fails
-    :return: List of open orders for the bot
-    """
-    return executor.execute(
-        endpoint="Bot",
-        response_type=BotOrderList,
-        query_params={
-            "channel": "GET_RUNTIME_OPEN_ORDERS",
-            "botid": bot_id,
-        },
-    )
-
-
-def get_bot_open_positions(executor: SyncExecutor[Authenticated], bot_id: str) -> BotPositionList:
-    """
-    Retrieves the open positions for a specific bot.
-
-    :param executor: Executor for Haas API interaction
-    :param bot_id: The ID of the bot for which to retrieve the open positions
-    :raises HaasApiError: If retrieval fails
-    :return: List of open positions for the bot
-    """
-    return executor.execute(
-        endpoint="Bot",
-        response_type=BotPositionList,
-        query_params={
-            "channel": "GET_RUNTIME_OPEN_POSITIONS",
-            "botid": bot_id,
-        },
-    )
-
-
-def get_bot_closed_positions(executor: SyncExecutor[Authenticated], bot_id: str, next_page_id: int, page_length: int) -> BotClosedPositionList:
-    """
-    Retrieves the closed positions for a specific bot.
-
-    :param executor: Executor for Haas API interaction
-    :param bot_id: The ID of the bot for which to retrieve the closed positions
-    :param next_page_id: The ID of the next page to retrieve
-    :param page_length: The number of items per page
-    :raises HaasApiError: If retrieval fails
-    :return: Paginated list of closed positions for the bot
-    """
-    return executor.execute(
-        endpoint="Bot",
-        response_type=BotClosedPositionList,
-        query_params={
-            "channel": "GET_RUNTIME_CLOSED_POSITIONS",
-            "botid": bot_id,
-            "nextpageid": next_page_id,
-            "pagelength": page_length,
-        },
-    )
-
-
-def reset_bot(executor: SyncExecutor[Authenticated], bot_id: str, config: BotResetConfig) -> bool:
-    """
-    Resets a specific bot based on the provided configuration.
-
-    :param executor: Executor for Haas API interaction
-    :param bot_id: The ID of the bot to reset
-    :param config: The configuration for resetting the bot
-    :raises HaasApiError: If reset fails
-    :return: True if reset was successful
-    """
-    return executor.execute(
-        endpoint="Bot",
-        response_type=bool,
-        query_params={
-            "channel": "RESET_BOT",
-            "botid": bot_id,
-            "config": config.model_dump_json(),
-        },
-    )
-
-from typing import Iterator, TypeVar
-
-T = TypeVar('T')
-
-def paginate_results(
-    executor: SyncExecutor[Authenticated],
-    endpoint: HaasApiEndpoint,
-    response_type: Type[PaginatedResponse[T]],
-    query_params: dict,
-    page_length: int = 100,
-) -> Iterator[T]:
-    """
-    Helper function to paginate through results from an API endpoint.
-
-    :param executor: Executor for Haas API interaction
-    :param endpoint: The API endpoint to call
-    :param response_type: The expected response type
-    :param query_params: The query parameters for the API call
-    :param page_length: The number of items per page (default: 100)
-    :return: An iterator yielding items from the paginated results
-    """
-    next_page_id = 0
-    while True:
-        resp = executor.execute(
-            endpoint=endpoint,
-            response_type=response_type,
-            query_params={**query_params, "nextpageid": next_page_id, "pagelength": page_length},
-        )
-        yield from resp.items
-        if resp.next_page_id == 0:
-            break
-        next_page_id = resp.next_page_id
-
-def rate_limit(max_calls: int, period: float):
-    """
-    Decorator to rate limit the execution of a function.
-
-    :param max_calls: The maximum number of calls allowed within the period
-    :param period: The time period in seconds
-    """
-    import time
-    from collections import deque
-
-    call_timestamps = deque(maxlen=max_calls)
-
-    def decorator(func):
-        def wrapper(*args, **kwargs):
-            if len(call_timestamps) == max_calls:
-                elapsed_time = time.time() - call_timestamps[0]
-                if elapsed_time < period:
-                    time.sleep(period - elapsed_time)
-            call_timestamps.append(time.time())
-            return func(*args, **kwargs)
-        return wrapper
-    return decorator
-
-def paginate_results(
-    executor: SyncExecutor[Authenticated],
-    endpoint: HaasApiEndpoint,
-    response_type: Type[PaginatedResponse[T]],
-    initial_params: dict[str, Any],
-    page_size: int = 100
-) -> Iterator[T]:
-    """
-    A generator that handles pagination for API calls that return paginated results.
-
-    :param executor: Executor for Haas API interaction
-    :param endpoint: The API endpoint to call
-    :param response_type: The expected response type
-    :param initial_params: Initial parameters for the API call
-    :param page_size: Number of items per page
-    :yields: Items from the paginated results
-    :raises HaasApiError: If an API error occurs
-    """
-    params = initial_params.copy()
-    params['pagelength'] = page_size
-    params['nextpageid'] = 0
-
-    while True:
-        try:
-            response = executor.execute(endpoint, response_type, params)
-        except HaasApiError as e:
-            if 'rate limit exceeded' in str(e).lower():
-                raise HaasApiRateLimitError("API rate limit exceeded. Please wait before making more requests.") from e
-            elif 'authentication' in str(e).lower():
-                raise HaasApiAuthenticationError("Authentication failed. Please check your credentials.") from e
-            else:
-                raise
-
-        for item in response.items:
-            yield item
-
-        if response.next_page_id == 0:
-            break
-
-        params['nextpageid'] = response.next_page_id
