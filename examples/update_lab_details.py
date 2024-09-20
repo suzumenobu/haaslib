@@ -6,46 +6,45 @@ from haaslib.model import CreateLabRequest
 
 def main():
     executor = api.RequestsExecutor(host="127.0.0.1", port=8090, state=api.Guest())
-    executor = executor.authenticate(email="your_email@example.com", password="your_password")
 
-    price_api = api.PriceAPI(executor)
-    account_api = api.AccountAPI(executor)
-    script_api = api.HaasScriptAPI(executor)
-    labs_api = api.LabsAPI(executor)
-
-    markets = price_api.market_list()
+    markets = api.get_all_markets(executor)
     market = random.choice(markets)
-    print(f"Selected market: {market.name}")
+    print(f"Got {len(markets)} and choosed {market}")
 
-    accounts = account_api.get_accounts()
+    # Authenticate to get access for the all endpoints
+    executor = executor.authenticate(
+        email="garrypotterr@gmail.com", password="IQYTCQJIQYTCQJ"
+    )
+
+    accounts = api.get_accounts(executor)
     account = random.choice(accounts)
-    print(f"Selected account: {account.name}")
+    print(f"Got {len(accounts)} and choosed {account}")
 
-    scripts = script_api.get_all_script_items()
-    script = next(script for script in scripts if script.script_name == "Haasonline Original - Scalper Bot")
-    print(f"Selected script: {script.script_name}")
-
-    lab_details = labs_api.create_lab(
-        script_id=script.script_id,
-        name="Updated Lab Example",
-        account_id=account.account_id,
-        market=market.name,
-        interval=15,
-        style="CandleStick",
+    # Get available scripts
+    scripts = api.get_all_scripts(executor)
+    script = next(
+        script
+        for script in scripts
+        if script.script_name == "Haasonline Original - Scalper Bot"
     )
-    print(f"Created lab: {lab_details.name}")
+    print(f"Got {len(scripts)} and choosed {script}")
 
-    # Update lab parameters
+    # Create lab
+    lab_details = api.create_lab(
+        executor,
+        CreateLabRequest(
+            script_id=script.script_id,
+            name="My first lab",
+            account_id=account.account_id,
+            market=market.as_market_tag(),
+            interval=0,
+            default_price_data_style="CandleStick",
+        ),
+    )
+    print(f"{lab_details=}")
     lab_details.parameters[0].options = [1, 2, 3, 4, 5]
-    updated_lab = labs_api.update_lab_details(
-        lab_id=lab_details.lab_id,
-        name=lab_details.name,
-        type=lab_details.algorithm,
-        config=lab_details.user_lab_config,
-        settings=lab_details.haas_script_settings,
-        parameters=lab_details.parameters,
-    )
-    print(f"Updated lab: {updated_lab.name}")
+    api.update_lab_details(executor, lab_details)
+
 
 if __name__ == "__main__":
     main()
