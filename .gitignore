@@ -1,3 +1,9 @@
 dist/
 **__pycache__**
 pyrightconfig.json
+/HaasAPIFiles
+/haaslib/examples
+/haaslib/Phyton_automatically_generated
+/test_outputs
+.DS_Store
+.env
