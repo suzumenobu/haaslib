@@ -1,62 +1,47 @@
-import random
 import sys
-import traceback
+import os
 
-try:
-    import requests
-except ImportError:
-    print("Error: The 'requests' library is not installed. Please install it using 'pip install requests'.")
-    sys.exit(1)
+# Add the parent directory to the Python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-try:
-    from pydantic import ValidationError
-except ImportError:
-    print("Error: The 'pydantic' library is not installed. Please install it using 'pip install pydantic'.")
-    sys.exit(1)
+import unittest
+from dotenv import load_dotenv
 
-from haaslib.api import RequestsExecutor, HaasApiError, Guest
-from haaslib.model import AuthenticatedSessionResponse
+from haaslib.api import RequestsExecutor, get_all_markets, get_accounts, HaasApiError, Guest, Authenticated
+from haaslib.model import CloudMarket, UserAccount
 
-def main():
-    try:
-        executor = RequestsExecutor(host="127.0.0.1", port=8090, state=Guest())
-        try:
-            print("Attempting authentication...")
-            executor = executor.authenticate(
-                email="garrypotterr@gmail.com", password="IQYTCQJIQYTCQJ"
-            )
-            print("Authentication successful!")
-            print(f"Authenticated state: {executor.state}")
-            
-            # Add this block to check and log the user_id
-            if executor.state.user_id == 'default_user_id':
-                print("Warning: User ID is set to default. The API might not be providing a specific user ID.")
-            else:
-                print(f"Authenticated user ID: {executor.state.user_id}")
+class HaasApiTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        load_dotenv()
+        cls.host = os.getenv('HAAS_API_HOST')
+        cls.port = int(os.getenv('HAAS_API_PORT', '8090'))
+        cls.email = os.getenv('HAAS_API_EMAIL')
+        cls.password = os.getenv('HAAS_API_PASSWORD')
+        cls.executor = RequestsExecutor(host=cls.host, port=cls.port, state=Guest())
 
-        except HaasApiError as e:
-            print(f"Authentication failed: {e}")
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            print("Exception details:")
-            for line in traceback.format_exception(exc_type, exc_value, exc_traceback):
-                print(line, end="")
-            print("\nAPI Error Details:")
-            print(f"Error message: {str(e)}")
-        except ValidationError as e:
-            print("Validation error occurred:")
-            print(e)
-            print("\nRaw API response:")
-            print(e.json())
-        except requests.exceptions.RequestException as e:
-            print(f"Network error: {e}")
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            print("Exception details:")
-            for line in traceback.format_exception(exc_type, exc_value, exc_traceback):
-                print(line, end="")
-    except ImportError as e:
-        print(f"Import error: {e}")
-        print("Please ensure that all required libraries are installed and that the 'haaslib' package is in your Python path.")
+    def test_authentication(self):
+        print(f"Attempting authentication for {self.email}...")
+        authenticated_executor = self.executor.authenticate(email=self.email, password=self.password)
+        self.assertIsInstance(authenticated_executor, RequestsExecutor)
+        self.assertIsInstance(authenticated_executor.state, Authenticated)
+        print("Authentication successful.")
 
+    def test_get_markets(self):
+        authenticated_executor = self.executor.authenticate(email=self.email, password=self.password)
+        markets = get_all_markets(authenticated_executor)
+        self.assertIsInstance(markets, list)
+        self.assertTrue(len(markets) > 0)
+        self.assertIsInstance(markets[0], CloudMarket)
+        print(f"Retrieved {len(markets)} markets.")
 
-if __name__ == "__main__":
-    main()
+    def test_get_accounts(self):
+        authenticated_executor = self.executor.authenticate(email=self.email, password=self.password)
+        accounts = get_accounts(authenticated_executor)
+        self.assertIsInstance(accounts, list)
+        if len(accounts) > 0:
+            self.assertIsInstance(accounts[0], UserAccount)
+        print(f"Retrieved {len(accounts)} accounts.")
+
+if __name__ == '__main__':
+    unittest.main(verbosity=2)

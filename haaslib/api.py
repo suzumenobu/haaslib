@@ -4,6 +4,7 @@ import copy
 import dataclasses
 import json
 import random
+import sys
 from typing import (
     Any,
     Collection,
@@ -17,9 +18,18 @@ from typing import (
     cast,
 )
 
-import requests
-from pydantic import BaseModel, TypeAdapter, ValidationError
-from pydantic.json import pydantic_encoder
+try:
+    import requests
+except ImportError:
+    print("Error: The 'requests' library is not installed. Please install it using 'pip install requests'.")
+    sys.exit(1)
+
+try:
+    from pydantic import BaseModel, TypeAdapter, ValidationError
+    from pydantic.json import pydantic_encoder
+except ImportError:
+    print("Error: The 'pydantic' library is not installed. Please install it using 'pip install pydantic'.")
+    sys.exit(1)
 
 from haaslib.domain import HaaslibExcpetion
 from haaslib.logger import log
@@ -27,6 +37,7 @@ from haaslib.model import (
     AddBotFromLabRequest,
     ApiResponse,
     AuthenticatedSessionResponse,
+    AuthenticatedSessionResponseData,
     CloudMarket,
     CreateBotRequest,
     CreateLabRequest,
@@ -39,6 +50,8 @@ from haaslib.model import (
     UserLabBacktestResult,
     UserLabDetails,
     UserLabRecord,
+    LicenseDetails,
+    LoginResponse,
 )
 
 ApiResponseData = TypeVar(
@@ -128,51 +141,52 @@ class RequestsExecutor(Generic[State]):
     protocol: Literal["http"] = dataclasses.field(default="http")
     """Communication protocol (currently only http is valid)."""
 
-    def authenticate(
-        self: RequestsExecutor[Guest], email: str, password: str
-    ) -> RequestsExecutor[Authenticated]:
-        """
-        Creates authenticated session in Haas API
-
-        :param email: Email used to login into Web UI
-        :param password: Password used to login into Web UI
-        :raises HaasApiError: If credentials are incorrect
-        """
+    def authenticate(self, email: str, password: str) -> 'RequestsExecutor[Authenticated]':
         interface_key = "".join(f"{random.randint(0, 100)}" for _ in range(10))
-        resp = self._execute_inner(
-            "User",
-            response_type=dict,
+        
+        # First step: LOGIN_WITH_CREDENTIALS
+        credentials_response = self._execute_guest(
+            endpoint="User",
+            response_type=ApiResponse[dict],
             query_params={
                 "channel": "LOGIN_WITH_CREDENTIALS",
                 "email": email,
                 "password": password,
                 "interfaceKey": interface_key,
-            },
+            }
         )
-        if not resp.success:
-            raise HaasApiError(resp.error or "Failed to login with credentials")
-
-        resp = self._execute_inner(
-            "User",
-            response_type=AuthenticatedSessionResponse,
+        
+        if not credentials_response.Success:
+            raise HaasApiError(f"Login with credentials failed: {credentials_response.Error}")
+        
+        # Second step: LOGIN_WITH_ONE_TIME_CODE
+        otp_response = self._execute_guest(
+            endpoint="User",
+            response_type=LoginResponse,
             query_params={
                 "channel": "LOGIN_WITH_ONE_TIME_CODE",
                 "email": email,
                 "pincode": random.randint(100_000, 200_000),
                 "interfaceKey": interface_key,
-            },
+            }
         )
-        if not resp.success:
-            raise HaasApiError(resp.error or "Failed to login")
-
-        assert resp.data is not None
-
-        state = Authenticated(
-            interface_key=interface_key, user_id=resp.data.data.user_id
-        )
-
+        
+        if not otp_response.Success or otp_response.Error:
+            raise HaasApiError(f"Login with one-time code failed: {otp_response.Error}")
+        
+        # Add this debug print
+        print(f"OTP Response: {otp_response}")
+        
+        if otp_response.Data is None or not isinstance(otp_response.Data, AuthenticatedSessionResponse):
+            raise HaasApiError(f"Unexpected response format: {otp_response}")
+        
         return RequestsExecutor(
-            host=self.host, port=self.port, state=state, protocol=self.protocol
+            host=self.host,
+            port=self.port,
+            state=Authenticated(
+                user_id=otp_response.Data.D.UserId,
+                interface_key=interface_key
+            )
         )
 
     def execute(
@@ -190,19 +204,12 @@ class RequestsExecutor(Generic[State]):
         :raises HaasApiError: If API returned any error
         :return: API response deserialized into `response_type`
         """
-        match self.state:
-            case Authenticated():
-                resp = cast(
-                    RequestsExecutor[Authenticated], self
-                )._execute_authenticated(endpoint, response_type, query_params)
-            case Guest():
-                resp = cast(RequestsExecutor[Guest], self)._execute_guest(
-                    endpoint, response_type, query_params
-                )
-            case _:
-                raise ValueError(f"Unknown auth state: {self.state}")
+        if isinstance(self.state, Authenticated):
+            resp = self._execute_authenticated(endpoint, response_type, query_params)
+        else:
+            resp = self._execute_guest(endpoint, response_type, query_params)
 
-        if not resp.success:
+        if not resp.Success:
             if query_params:
                 req = {
                     k: v
@@ -212,15 +219,15 @@ class RequestsExecutor(Generic[State]):
             else:
                 req = None
 
-            msg = resp.error or "[No response]"
+            msg = resp.Error or "[No response]"
 
             raise HaasApiError(
-                f"Failed to request {endpoint}API with {msg}. Input params: {req}"
+                f"Failed to request {endpoint}API with {msg}. Input params: {req}. Full response: {resp}"
             )
 
-        assert resp.data is not None
+        assert resp.Data is not None
 
-        return resp.data
+        return resp.Data
 
     def _execute_authenticated(
         self: RequestsExecutor[Authenticated],
@@ -239,19 +246,23 @@ class RequestsExecutor(Generic[State]):
         return self._execute_inner(endpoint, response_type, query_params)
 
     def _execute_guest(
-        self: RequestsExecutor[Guest],
-        endpoint: HaasApiEndpoint,
-        response_type: Type[ApiResponseData],
-        query_params: Optional[dict] = None,
-    ) -> ApiResponse[ApiResponseData]:
-        return self._execute_inner(endpoint, response_type, query_params)
-
-    def _execute_inner(
         self,
         endpoint: HaasApiEndpoint,
         response_type: Type[ApiResponseData],
         query_params: Optional[dict] = None,
     ) -> ApiResponse[ApiResponseData]:
+        if query_params is None:
+            query_params = {}
+        # Remove this line:
+        # query_params.pop('interfacekey', None)
+        return self._execute_inner(endpoint, response_type, query_params)
+
+    def _execute_inner(
+        self,
+        endpoint: HaasApiEndpoint,
+        response_type: Type[BaseModel],
+        query_params: Optional[dict] = None,
+    ) -> BaseModel:
         url = f"{self.protocol}://{self.host}:{self.port}/{endpoint}API.php"
         log.debug(
             f"[{self.state.__class__.__name__}]: Requesting {url=} with {query_params=}"
@@ -273,16 +284,22 @@ class RequestsExecutor(Generic[State]):
                     log.debug(f"Converting to JSON string pydantic `{key}` field")
                     query_params[key] = value.model_dump_json(by_alias=True)
 
-        resp = requests.get(url, params=query_params)
-        resp.raise_for_status()
-
-        ta = TypeAdapter(ApiResponse[response_type])
-
         try:
-            return ta.validate_python(resp.json())
-        except ValidationError:
+            resp = requests.get(url, params=query_params)
+            resp.raise_for_status()
+            raw_response = resp.json()
+            
+            # Add this debug print
+            print(f"Raw API response: {raw_response}")
+
+            validated_response = response_type.model_validate(raw_response)
+            return validated_response
+        except requests.RequestException as e:
             log.error(f"Failed to request: {resp.content}")
-            raise
+            raise HaasApiError(f"Failed to request {endpoint}API: {e}")
+        except pydantic.ValidationError as e:
+            log.error(f"Failed to validate response: {resp.content}")
+            raise HaasApiError(f"Failed to validate {endpoint}API response: {e}")
 
     @staticmethod
     def _custom_encoder(**kwargs):
@@ -598,3 +615,30 @@ def get_all_bots(executor: SyncExecutor[Authenticated]) -> list[HaasBot]:
         response_type=list[HaasBot],
         query_params={"channel": "GET_BOTS"},
     )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
