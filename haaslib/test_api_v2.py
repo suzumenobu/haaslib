@@ -28,12 +28,12 @@ class HaasApiTest(unittest.TestCase):
         print("Authentication successful.")
 
     def test_get_markets(self):
-        authenticated_executor = self.executor.authenticate(email=self.email, password=self.password)
+        authenticated_executor = self.get_authenticated_executor()
         markets = get_all_markets(authenticated_executor)
         self.assertIsInstance(markets, list)
         self.assertTrue(len(markets) > 0)
-        self.assertIsInstance(markets[0], CloudMarket)
-        print(f"Retrieved {len(markets)} markets.")
+        for market in markets:
+            self.assertIsInstance(market, CloudMarket)
 
     def test_get_accounts(self):
         authenticated_executor = self.executor.authenticate(email=self.email, password=self.password)
@@ -42,6 +42,9 @@ class HaasApiTest(unittest.TestCase):
         if len(accounts) > 0:
             self.assertIsInstance(accounts[0], UserAccount)
         print(f"Retrieved {len(accounts)} accounts.")
+
+    def get_authenticated_executor(self):
+        return self.executor.authenticate(email=self.email, password=self.password)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -16,6 +16,7 @@ from typing import (
     Type,
     TypeVar,
     cast,
+    List,
 )
 
 try:
@@ -25,7 +26,7 @@ except ImportError:
     sys.exit(1)
 
 try:
-    from pydantic import BaseModel, TypeAdapter, ValidationError
+    from pydantic import BaseModel, TypeAdapter, ValidationError, RootModel, Field
     from pydantic.json import pydantic_encoder
 except ImportError:
     print("Error: The 'pydantic' library is not installed. Please install it using 'pip install pydantic'.")
@@ -267,38 +268,20 @@ class RequestsExecutor(Generic[State]):
         log.debug(
             f"[{self.state.__class__.__name__}]: Requesting {url=} with {query_params=}"
         )
-        if query_params:
-            query_params = query_params.copy()
-            for key in query_params.keys():
-                value = query_params[key]
-                if isinstance(value, (str, int, float, bool, type(None))):
-                    continue
-
-                if isinstance(value, list):
-                    log.debug(f"Converting to JSON string list `{key}` field")
-                    query_params[key] = json.dumps(
-                        value, default=self._custom_encoder(by_alias=True)
-                    )
-
-                if isinstance(value, BaseModel):
-                    log.debug(f"Converting to JSON string pydantic `{key}` field")
-                    query_params[key] = value.model_dump_json(by_alias=True)
-
         try:
             resp = requests.get(url, params=query_params)
             resp.raise_for_status()
             raw_response = resp.json()
             
-            # Add this debug print
             print(f"Raw API response: {raw_response}")
 
             validated_response = response_type.model_validate(raw_response)
             return validated_response
         except requests.RequestException as e:
-            log.error(f"Failed to request: {resp.content}")
+            log.error(f"Failed to request: {e}")
             raise HaasApiError(f"Failed to request {endpoint}API: {e}")
         except pydantic.ValidationError as e:
-            log.error(f"Failed to validate response: {resp.content}")
+            log.error(f"Failed to validate response: {raw_response}")
             raise HaasApiError(f"Failed to validate {endpoint}API response: {e}")
 
     @staticmethod
@@ -312,19 +295,56 @@ class RequestsExecutor(Generic[State]):
         return base_encoder
 
 
-def get_all_markets(executor: SyncExecutor[Any]) -> list[CloudMarket]:
+class Market(BaseModel):
+    PS: str
+    P: str
+    S: str
+    C: str
+
+class MarketList(RootModel):
+    root: List[Market]
+
+class Account(BaseModel):
+    UID: str
+    AID: str
+    N: str
+    EC: str
+    ET: int
+    S: int
+    IS: bool
+    IT: bool
+    PA: bool
+    WL: bool
+    PM: int
+    MS: Optional[str] = None
+    V: int
+
+class AccountList(BaseModel):
+    Success: bool
+    Error: str
+    Data: List[Account]
+
+def get_all_markets(executor: RequestsExecutor) -> List[CloudMarket]:
     """
     Retrieves information about all available markets.
 
     :param executor: Executor for Haas API interaction
-    :raises HaasApiError: If something goes wrong (Not found yet)
+    :raises HaasApiError: If something goes wrong
     :return: List with all cloud markets
     """
     return executor.execute(
         endpoint="Price",
-        response_type=list[CloudMarket],
+        response_type=List[CloudMarket],
         query_params={"channel": "MARKETLIST"},
     )
+
+def get_accounts(executor: RequestsExecutor) -> List[Account]:
+    resp = executor.execute(
+        endpoint="Account",
+        response_type=AccountList,
+        query_params={"channel": "GET_ACCOUNTS"}
+    )
+    return resp.Data
 
 
 def get_all_markets_by_pricesource(
@@ -371,21 +391,6 @@ def get_all_scripts(
         endpoint="HaasScript",
         response_type=list[HaasScriptItemWithDependencies],
         query_params={"channel": "GET_ALL_SCRIPT_ITEMS"},
-    )
-
-
-def get_accounts(executor: SyncExecutor[Authenticated]) -> list[UserAccount]:
-    """
-    Retrieves information about user accounts for an authenticated user.
-
-    :param executor: Executor for Haas API interaction
-    :raises HaasApiError: If something goes wrong (Not found yet)
-    :return: List with all available user accounts
-    """
-    return executor.execute(
-        endpoint="Account",
-        response_type=list[UserAccount],
-        query_params={"channel": "GET_ACCOUNTS"},
     )
 
 
@@ -615,6 +620,13 @@ def get_all_bots(executor: SyncExecutor[Authenticated]) -> list[HaasBot]:
         response_type=list[HaasBot],
         query_params={"channel": "GET_BOTS"},
     )
+
+
+
+
+
+
+
 
 
 
