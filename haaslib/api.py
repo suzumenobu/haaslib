@@ -17,6 +17,7 @@ from typing import (
     TypeVar,
     cast,
     List,
+    Dict,
 )
 
 try:
@@ -114,16 +115,15 @@ class SyncExecutor(Protocol, Generic[State]):
         response_type: Type[ApiResponseData],
         query_params: Optional[dict] = None,
     ) -> ApiResponseData:
-        """
-        Executes any request to Haas API and serialized it's reponse
-
-        :param endpoint: Actual Haas API endpoint
-        :param response_type: Pydantic class for response deserialization
-        :param query_params: Endpoint parameters
-        :raises HaasApiError: If API returned any error
-        :return: API response deserialized into `response_type`
-        """
-        ...
+        print(f"Debug: Executing {endpoint} endpoint")
+        resp = self._execute_authenticated(endpoint, response_type, query_params)
+        print(f"Debug: Received response for {endpoint}")
+        
+        if isinstance(resp, dict) and 'Success' in resp:
+            if not resp['Success']:
+                raise HaasApiError(f"API returned error: {resp.get('Error', 'Unknown error')}")
+            return resp['Data']
+        return resp
 
 
 @dataclasses.dataclass(kw_only=True, frozen=True, slots=True)
@@ -205,30 +205,16 @@ class RequestsExecutor(Generic[State]):
         :raises HaasApiError: If API returned any error
         :return: API response deserialized into `response_type`
         """
-        if isinstance(self.state, Authenticated):
-            resp = self._execute_authenticated(endpoint, response_type, query_params)
-        else:
-            resp = self._execute_guest(endpoint, response_type, query_params)
-
-        if not resp.Success:
-            if query_params:
-                req = {
-                    k: v
-                    for k, v in query_params.items()
-                    if k not in ("userid", "interfacekey")
-                }
-            else:
-                req = None
-
-            msg = resp.Error or "[No response]"
-
-            raise HaasApiError(
-                f"Failed to request {endpoint}API with {msg}. Input params: {req}. Full response: {resp}"
-            )
-
-        assert resp.Data is not None
-
-        return resp.Data
+        resp = self._execute_authenticated(endpoint, response_type, query_params)
+        
+        # Remove this print statement
+        # print(f"Raw API response: {resp}")  
+        
+        if isinstance(resp, dict) and 'Success' in resp:
+            if not resp['Success']:
+                raise HaasApiError(f"API returned error: {resp.get('Error', 'Unknown error')}")
+            return resp['Data']
+        return resp
 
     def _execute_authenticated(
         self: RequestsExecutor[Authenticated],
@@ -261,9 +247,9 @@ class RequestsExecutor(Generic[State]):
     def _execute_inner(
         self,
         endpoint: HaasApiEndpoint,
-        response_type: Type[BaseModel],
+        response_type: Type[T],
         query_params: Optional[dict] = None,
-    ) -> BaseModel:
+    ) -> T:
         url = f"{self.protocol}://{self.host}:{self.port}/{endpoint}API.php"
         log.debug(
             f"[{self.state.__class__.__name__}]: Requesting {url=} with {query_params=}"
@@ -273,14 +259,23 @@ class RequestsExecutor(Generic[State]):
             resp.raise_for_status()
             raw_response = resp.json()
             
-            print(f"Raw API response: {raw_response}")
+            print(f"Raw API response: {raw_response}")  # Add this line for debugging
 
-            validated_response = response_type.model_validate(raw_response)
+            if isinstance(response_type, type) and issubclass(response_type, BaseModel):
+                try:
+                    validated_response = response_type.model_validate(raw_response)
+                except ValidationError as e:
+                    raise HaasApiException(f"Response validation failed: {e}")
+            elif response_type == List[Dict[str, Any]]:
+                validated_response = raw_response  # No validation for List[Dict[str, Any]]
+            else:
+                raise HaasApiException(f"Unsupported response type: {response_type}")
+
             return validated_response
         except requests.RequestException as e:
             log.error(f"Failed to request: {e}")
-            raise HaasApiError(f"Failed to request {endpoint}API: {e}")
-        except pydantic.ValidationError as e:
+            raise HaasApiError(f"Failed to request {endpoint} endpoint: {e}\nURL: {url}\nParams: {query_params}")
+        except ValidationError as e:
             log.error(f"Failed to validate response: {raw_response}")
             raise HaasApiError(f"Failed to validate {endpoint}API response: {e}")
 
@@ -324,31 +319,30 @@ class AccountList(BaseModel):
     Error: str
     Data: List[Account]
 
-def get_all_markets(executor: RequestsExecutor) -> List[CloudMarket]:
-    """
-    Retrieves information about all available markets.
-
-    :param executor: Executor for Haas API interaction
-    :raises HaasApiError: If something goes wrong
-    :return: List with all cloud markets
-    """
-    return executor.execute(
+def get_all_markets(executor: AuthenticatedExecutor) -> List[Dict[str, Any]]:
+    print("Debug: Entering get_all_markets")
+    markets = executor.execute(
         endpoint="Price",
-        response_type=List[CloudMarket],
-        query_params={"channel": "MARKETLIST"},
+        response_type=List[Dict[str, Any]],
+        query_params={"channel": "MARKETLIST"}
     )
+    print(f"Debug: get_all_markets received {len(markets)} markets")
+    print("Debug: Exiting get_all_markets")
+    return markets
 
-def get_accounts(executor: RequestsExecutor) -> List[Account]:
-    resp = executor.execute(
+def get_accounts(executor: AuthenticatedExecutor) -> List[Dict[str, Any]]:
+    print("Debug: Entering get_accounts")
+    accounts = executor.execute(
         endpoint="Account",
-        response_type=AccountList,
+        response_type=List[Dict[str, Any]],
         query_params={"channel": "GET_ACCOUNTS"}
     )
-    return resp.Data
-
+    print(f"Debug: get_accounts received {len(accounts)} accounts")
+    print("Debug: Exiting get_accounts")
+    return accounts
 
 def get_all_markets_by_pricesource(
-    executor: SyncExecutor[Any], price_source: str
+    executor: AuthenticatedExecutor, price_source: str
 ) -> list[CloudMarket]:
     """
     Retrieves information about markets from a specific price source.
@@ -397,20 +391,9 @@ def get_all_scripts(
 def create_lab(
     executor: SyncExecutor[Authenticated], req: CreateLabRequest
 ) -> UserLabDetails:
-    """
-    Creates a new lab for an authenticated user.
-
-    Lab name could be duplicated
-    Market Tag could be created from `CloudMarket`
-
-    :param executor: Executor for Haas API interaction
-    :param req: Details of the lab
-    :raises HaasApiError: If something goes wrong (Not found yet)
-    :return: Created lab details
-    """
-    return executor.execute(
+    response = executor.execute(
         endpoint="Labs",
-        response_type=UserLabDetails,
+        response_type=dict,  # Change this to dict to handle both success and error cases
         query_params={
             "channel": "CREATE_LAB",
             "scriptId": req.script_id,
@@ -421,6 +404,11 @@ def create_lab(
             "style": req.default_price_data_style,
         },
     )
+    
+    if not response.get('Success'):
+        raise HaasApiError(f"Failed to create lab: {response.get('Error')}")
+    
+    return UserLabDetails(**response.get('Data', {}))
 
 
 def start_lab_execution(
@@ -620,6 +608,21 @@ def get_all_bots(executor: SyncExecutor[Authenticated]) -> list[HaasBot]:
         response_type=list[HaasBot],
         query_params={"channel": "GET_BOTS"},
     )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

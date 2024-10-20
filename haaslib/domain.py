@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import enum
 from datetime import datetime, timedelta
+from typing import Literal
 
 
 @dataclasses.dataclass
@@ -75,3 +76,15 @@ class HaaslibExcpetion(Exception):
 class Script:
     id: str
     type: int
+
+PriceDataStyle = Literal[
+    "CandleStick",
+    "CandleStickHLC",
+    "HeikinAshi",
+    "OHLC",
+    "HLC",
+    "CloseLine",
+    "Line",
+    "Mountain",
+]
+

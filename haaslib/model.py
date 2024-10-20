@@ -147,17 +147,6 @@ class CreateBotRequest:
     interval: int = dataclasses.field(default=15)
     chartstyle: int = dataclasses.field(default=301)
 
-PriceDataStyle = Literal[
-    "CandleStick",
-    "CandleStickHLC",
-    "HeikinAshi",
-    "OHLC",
-    "HLC",
-    "CloseLine",
-    "Line",
-    "Mountain",
-]
-
 @dataclasses.dataclass
 class CreateLabRequest:
     script_id: str
@@ -165,7 +154,7 @@ class CreateLabRequest:
     account_id: str
     market: MarketTag
     interval: int
-    default_price_data_style: PriceDataStyle
+    default_price_data_style: str  # This should be str, not PriceDataStyle
 
     @classmethod
     def with_generated_name(
@@ -174,7 +163,7 @@ class CreateLabRequest:
         account_id: str,
         market: MarketTag,
         interval: int,
-        default_price_data_style: PriceDataStyle,
+        default_price_data_style: str,
     ) -> CreateLabRequest:
         name = f"{interval}_{market.tag}_{script_id}_{account_id}"
         return cls(
