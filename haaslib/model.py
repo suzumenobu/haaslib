@@ -15,7 +15,7 @@ print(f"Python version: {sys.version}")
 print(f"Python path: {sys.path}")
 
 try:
-    from pydantic import BaseModel, Field
+    from pydantic import BaseModel, Field, ConfigDict
     print("Pydantic imported successfully")
 except ImportError as e:
     print(f"Failed to import pydantic: {e}")
@@ -55,33 +55,37 @@ except ImportError as e:
         pass
     
     class UserAccount(BaseModel):
-        UserId: str
-        AccountId: str
-        Name: str
-        ExchangeCode: str
-        ExchangeType: str
-        Status: str
-        IsSimulated: bool
-        IsTestNet: bool
-        IsPublic: bool
-        PositionMode: str
-        MarginSettings: Any
-
-T = TypeVar("T")
+        pass
+    
+    T = TypeVar("T")
 
 @dataclasses.dataclass
 class UserAccount:
-    UserId: str
-    AccountId: str
-    Name: str
-    ExchangeCode: str
-    ExchangeType: str
-    Status: str
-    IsSimulated: bool
-    IsTestNet: bool
-    IsPublic: bool
-    PositionMode: str
-    MarginSettings: Any
+    uid: str = Field(alias="UID")  # User ID (email)
+    aid: str = Field(alias="AID")  # Account ID (hash)
+    name: str = Field(alias="N")   # Account name
+    exchange_code: str = Field(alias="EC")  # Exchange code (e.g., BINANCEQUARTERLY)
+    exchange_type: int = Field(alias="ET")  # Exchange type (numeric)
+    status: int = Field(alias="S")  # Account status
+    is_simulated: bool = Field(alias="IS")  # Is simulated account
+    is_test: bool = Field(alias="IT")  # Is test account
+    paper_account: bool = Field(alias="PA")  # Is paper trading account
+    watchlist: bool = Field(alias="WL")  # Is watchlist
+    position_mode: int = Field(alias="PM")  # Position mode
+    margin_source: Optional[str] = Field(alias="MS")  # Margin source
+    version: int = Field(alias="V")  # Version
+
+    class Config:
+        allow_population_by_field_name = True
+        extra = "ignore"
+
+    @property
+    def account_id(self) -> str:
+        return self.aid
+
+    @property
+    def user_id(self) -> str:
+        return self.uid
 
 class ApiResponse(BaseModel, Generic[T]):
     Success: bool
@@ -127,15 +131,26 @@ class HaasScriptItemWithDependencies(BaseModel):
         return self.script_type
 
 class CloudMarket(BaseModel):
-    category: str = Field(alias="C")
-    price_source: str = Field(alias="PS")
-    primary: str = Field(alias="P")
-    secondary: str = Field(alias="S")
+    symbol: str
+    base_asset: str
+    quote_asset: str
+    price_source: str
 
-    def as_market_tag(self) -> MarketTag:
-        return MarketTag(
-            f"{self.price_source}_{self.primary}_{self.secondary}_{self.category}"
-        )
+    class Config:
+        allow_population_by_field_name = True
+
+class Market(BaseModel):
+    symbol: str = Field(alias="S")
+    base_asset: str = Field(alias="B")
+    quote_asset: str = Field(alias="Q")
+    price_source: str = Field(alias="P")
+
+    class Config:
+        populate_by_name = True
+
+    @property
+    def tag(self) -> str:
+        return f"{self.price_source}:{self.symbol}"
 
 @dataclasses.dataclass
 class CreateBotRequest:
@@ -147,29 +162,21 @@ class CreateBotRequest:
     interval: int = dataclasses.field(default=15)
     chartstyle: int = dataclasses.field(default=301)
 
-@dataclasses.dataclass
-class CreateLabRequest:
+class CreateLabRequest(BaseModel):
     script_id: str
     name: str
     account_id: str
-    market: MarketTag
+    market: str
     interval: int
-    default_price_data_style: str  # This should be str, not PriceDataStyle
+    default_price_data_style: PriceDataStyle
 
     @classmethod
-    def with_generated_name(
-        cls: Type[CreateLabRequest],
-        script_id: str,
-        account_id: str,
-        market: MarketTag,
-        interval: int,
-        default_price_data_style: str,
-    ) -> CreateLabRequest:
+    def from_market_tag(cls, script_id: str, account_id: str, market: MarketTag, interval: int, default_price_data_style: PriceDataStyle):
         name = f"{interval}_{market.tag}_{script_id}_{account_id}"
         return cls(
             script_id=script_id,
             account_id=account_id,
-            market=market,
+            market=market.tag,
             interval=interval,
             default_price_data_style=default_price_data_style,
             name=name,
@@ -207,3 +214,69 @@ class UserLabBacktestResult(BaseModel):
 
 class LoginResponse(ApiResponse[AuthenticatedSessionResponse]):
     pass
+
+class Account(BaseModel):
+    uid: str = Field(alias="UID")
+    aid: str = Field(alias="AID")
+    name: str = Field(alias="N")
+    exchange_code: str = Field(alias="EC")
+    exchange_type: int = Field(alias="ET")
+    status: int = Field(alias="S")
+    is_simulated: bool = Field(alias="IS")
+    is_test: bool = Field(alias="IT")
+    paper_account: bool = Field(alias="PA")
+    watchlist: bool = Field(alias="WL")
+    position_mode: int = Field(alias="PM")
+    margin_source: Optional[str] = Field(alias="MS")
+    version: int = Field(alias="V")
+
+class UserLabDetails(BaseModel):
+    lab_id: str
+    script_id: str
+    name: str
+    interval: int
+    default_price_data_style: str
+    market: str
+    account_id: Optional[str]
+    style: str
+    parameters: Dict[str, Any]
+    haas_script_settings: Dict[str, Any]
+    user_lab_config: Dict[str, Any]
+    algorithm: str
+
+class UserAccount(BaseModel):
+    aid: str
+    uid: str
+    name: str
+    exchange: str
+    status: int = Field(alias="S")
+    is_simulated: bool = Field(alias="IS")
+    is_test: bool = Field(alias="IT")
+    paper_account: bool = Field(alias="PA")
+    watchlist: bool = Field(alias="WL")
+    position_mode: int = Field(alias="PM")
+    margin_source: Optional[str] = Field(alias="MS")
+    version: int = Field(alias="V")
+
+    class Config:
+        allow_population_by_field_name = True
+        extra = "ignore"
+
+class AccountList(BaseModel):
+    Data: List[UserAccount] = Field(default_factory=list)
+
+from typing import List
+from pydantic import BaseModel, Field
+from .Phyton_automatically_generated.DataModel.MarketInformation import MarketInformation
+
+class CloudMarket(BaseModel):
+    symbol: str
+    base_asset: str
+    quote_asset: str
+    price_source: str
+
+    class Config:
+        allow_population_by_field_name = True
+
+class MarketList(BaseModel):
+    root: List[MarketInformation] = Field(default_factory=list)

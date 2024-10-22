@@ -19,6 +19,7 @@ from typing import (
     List,
     Dict,
 )
+from abc import ABC, abstractmethod
 
 try:
     import requests
@@ -33,7 +34,7 @@ except ImportError:
     print("Error: The 'pydantic' library is not installed. Please install it using 'pip install pydantic'.")
     sys.exit(1)
 
-from haaslib.domain import HaaslibExcpetion
+from haaslib.domain import HaaslibException
 from haaslib.logger import log
 from haaslib.model import (
     AddBotFromLabRequest,
@@ -54,6 +55,10 @@ from haaslib.model import (
     UserLabRecord,
     LicenseDetails,
     LoginResponse,
+    Market,
+    MarketList,
+    Account,
+    AccountList,
 )
 
 ApiResponseData = TypeVar(
@@ -65,7 +70,7 @@ HaasApiEndpoint = Literal["Labs", "Account", "HaasScript", "Price", "User", "Bot
 """Known Haas API endpoints"""
 
 
-class HaasApiError(HaaslibExcpetion):
+class HaasApiError(HaaslibException):
     """
     Base Excpetion for haaslib.
     """
@@ -73,34 +78,21 @@ class HaasApiError(HaaslibExcpetion):
     pass
 
 
-@dataclasses.dataclass
-class UserState:
-    """
-    Base user API Session type.
-    """
-
+class UserState(ABC):
     pass
 
 
 class Guest(UserState):
-    """
-    Default user session type.
-    """
-
     pass
 
 
-@dataclasses.dataclass
 class Authenticated(UserState):
-    """
-    Authenticated user session required for the most of the endpoints.
-    """
-
-    user_id: str
-    interface_key: str
+    def __init__(self, user_id: str, interface_key: str):
+        self.user_id: str = user_id
+        self.interface_key: str = interface_key
 
 
-State = TypeVar("State", bound=Guest | Authenticated)
+State = TypeVar("State", bound=UserState)
 """Generic to mark user session typ"""
 
 
@@ -109,21 +101,13 @@ class SyncExecutor(Protocol, Generic[State]):
     Main protocol for interaction with HaasAPI.
     """
 
-    def execute(
-        self,
-        endpoint: HaasApiEndpoint,
-        response_type: Type[ApiResponseData],
-        query_params: Optional[dict] = None,
-    ) -> ApiResponseData:
-        print(f"Debug: Executing {endpoint} endpoint")
-        resp = self._execute_authenticated(endpoint, response_type, query_params)
-        print(f"Debug: Received response for {endpoint}")
-        
-        if isinstance(resp, dict) and 'Success' in resp:
-            if not resp['Success']:
-                raise HaasApiError(f"API returned error: {resp.get('Error', 'Unknown error')}")
-            return resp['Data']
-        return resp
+    @abstractmethod
+    def execute(self, endpoint: HaasApiEndpoint, response_type: Type[ApiResponseData], query_params: Optional[dict] = None) -> ApiResponseData:
+        pass
+
+    @abstractmethod
+    def authenticate(self, email: str, password: str) -> 'SyncExecutor[Authenticated]':
+        pass
 
 
 @dataclasses.dataclass(kw_only=True, frozen=True, slots=True)
@@ -139,7 +123,7 @@ class RequestsExecutor(Generic[State]):
     state: State
     """ User session state."""
 
-    protocol: Literal["http"] = dataclasses.field(default="http")
+    protocol: str = "http"  # Change this from "https" to "http"
     """Communication protocol (currently only http is valid)."""
 
     def authenticate(self, email: str, password: str) -> 'RequestsExecutor[Authenticated]':
@@ -259,7 +243,7 @@ class RequestsExecutor(Generic[State]):
             resp.raise_for_status()
             raw_response = resp.json()
             
-            print(f"Raw API response: {raw_response}")  # Add this line for debugging
+            print(f"Raw API response: {raw_response}")  # Keep this line for debugging
 
             if isinstance(response_type, type) and issubclass(response_type, BaseModel):
                 try:
@@ -290,54 +274,25 @@ class RequestsExecutor(Generic[State]):
         return base_encoder
 
 
-class Market(BaseModel):
-    PS: str
-    P: str
-    S: str
-    C: str
-
-class MarketList(RootModel):
-    root: List[Market]
-
-class Account(BaseModel):
-    UID: str
-    AID: str
-    N: str
-    EC: str
-    ET: int
-    S: int
-    IS: bool
-    IT: bool
-    PA: bool
-    WL: bool
-    PM: int
-    MS: Optional[str] = None
-    V: int
-
-class AccountList(BaseModel):
-    Success: bool
-    Error: str
-    Data: List[Account]
-
-def get_all_markets(executor: AuthenticatedExecutor) -> List[Dict[str, Any]]:
+def get_all_markets(executor: AuthenticatedExecutor) -> MarketList:
     print("Debug: Entering get_all_markets")
     markets = executor.execute(
         endpoint="Price",
-        response_type=List[Dict[str, Any]],
+        response_type=MarketList,
         query_params={"channel": "MARKETLIST"}
     )
-    print(f"Debug: get_all_markets received {len(markets)} markets")
+    print(f"Debug: get_all_markets received {len(markets.root)} markets")
     print("Debug: Exiting get_all_markets")
     return markets
 
-def get_accounts(executor: AuthenticatedExecutor) -> List[Dict[str, Any]]:
+def get_accounts(executor: AuthenticatedExecutor) -> AccountList:
     print("Debug: Entering get_accounts")
     accounts = executor.execute(
         endpoint="Account",
-        response_type=List[Dict[str, Any]],
+        response_type=AccountList,
         query_params={"channel": "GET_ACCOUNTS"}
     )
-    print(f"Debug: get_accounts received {len(accounts)} accounts")
+    print(f"Debug: get_accounts received {len(accounts.Data)} accounts")
     print("Debug: Exiting get_accounts")
     return accounts
 
@@ -608,6 +563,14 @@ def get_all_bots(executor: SyncExecutor[Authenticated]) -> list[HaasBot]:
         response_type=list[HaasBot],
         query_params={"channel": "GET_BOTS"},
     )
+
+
+
+
+
+
+
+
 
 
 
