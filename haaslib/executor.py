@@ -1,78 +1,238 @@
-import logging
-from typing import Generic, Type, Optional, TypeVar, Any, Dict, List
+from __future__ import annotations
+
+import copy
+import dataclasses
+import json
+import random
+from typing import (
+    Any,
+    Generic,
+    Iterable,
+    Literal,
+    Optional,
+    Protocol,
+    Type,
+    TypeVar,
+    cast,
+    List,
+    Dict,
+    Union,
+)
+
 import requests
-from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
-from .api import SyncExecutor, State, Guest, Authenticated, HaasApiError, BaseModel, HaasApiEndpoint, ApiResponseData
-from .logging_config import logger
-from .config import config
+from pydantic import BaseModel, TypeAdapter, ValidationError, create_model, ConfigDict
+from pydantic.json import pydantic_encoder
 
-T = TypeVar('T')
+from haaslib.logger import log
+from haaslib.model import (
+    AddBotFromLabRequest,
+    CloudMarket,
+    CreateBotRequest,
+    CreateLabRequest,
+    GetBacktestResultRequest,
+    HaasBot,
+    HaasScriptItemWithDependencies,
+    PaginatedResponse,
+    StartLabExecutionRequest,
+    UserAccount,
+    UserLabBacktestResult,
+    UserLabDetails,
+    UserLabRecord,
+)
 
-class RequestsExecutor(SyncExecutor[Guest]):
-    def __init__(self, host: str = config.API_HOST, port: int = config.API_PORT, state: Guest = Guest()):
-        self.base_url = f"http://{host}:{port}"  # Changed to HTTP
-        self.state = state
-        self.session = requests.Session()
-        retry = Retry(total=3, backoff_factor=0.1, status_forcelist=[500, 502, 503, 504])
-        self.session.mount('http://', HTTPAdapter(max_retries=retry))  # Changed to HTTP
+ApiResponseData = TypeVar(
+    "ApiResponseData",
+    bound=Union[BaseModel, List[BaseModel], bool, str, Dict[str, Any]]
+)
 
-    def authenticate(self, email: str, password: str) -> 'RequestsExecutor[Authenticated]':
+HaasApiEndpoint = Literal["Labs", "Account", "HaasScript", "Price", "User", "Bot"]
+
+class HaasApiError(Exception):
+    pass
+
+@dataclasses.dataclass
+class UserState:
+    pass
+
+class Guest(UserState):
+    pass
+
+@dataclasses.dataclass
+class Authenticated(UserState):
+    user_id: str
+    interface_key: str
+
+State = TypeVar("State", bound=Guest | Authenticated)
+
+class ApiResponse(BaseModel, Generic[ApiResponseData]):
+    Success: bool
+    Error: Optional[str] = None
+    Data: Optional[ApiResponseData] = None
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+class SyncExecutor(Protocol, Generic[State]):
+    def execute(
+        self,
+        endpoint: HaasApiEndpoint,
+        response_type: Type[ApiResponseData],
+        query_params: Optional[dict] = None,
+    ) -> ApiResponseData:
+        ...
+
+@dataclasses.dataclass(kw_only=True, frozen=True, slots=True)
+class RequestsExecutor(Generic[State]):
+    host: str
+    port: int
+    state: State
+    protocol: Literal["http"] = dataclasses.field(default="http")
+
+    def authenticate(
+        self: RequestsExecutor[Guest], email: str, password: str
+    ) -> RequestsExecutor[Authenticated]:
+        interface_key = "".join(f"{random.randint(0, 100)}" for _ in range(10))
+        resp = self._execute_inner(
+            "User",
+            response_type=dict,
+            query_params={
+                "channel": "LOGIN_WITH_CREDENTIALS",
+                "email": email,
+                "password": password,
+                "interfaceKey": interface_key,
+            },
+        )
+        if not resp.Success:
+            raise HaasApiError(resp.Error or "Failed to login with credentials")
+
+        resp = self._execute_inner(
+            "User",
+            response_type=dict,
+            query_params={
+                "channel": "LOGIN_WITH_ONE_TIME_CODE",
+                "email": email,
+                "pincode": random.randint(100_000, 200_000),
+                "interfaceKey": interface_key,
+            },
+        )
+        if not resp.Success:
+            raise HaasApiError(resp.Error or "Failed to login")
+
+        assert resp.Data is not None
+
+        state = Authenticated(
+            interface_key=interface_key, user_id=resp.Data.get("UserId")
+        )
+
+        return RequestsExecutor(
+            host=self.host, port=self.port, state=state, protocol=self.protocol
+        )
+
+    def execute(
+        self,
+        endpoint: HaasApiEndpoint,
+        response_type: Type[ApiResponseData],
+        query_params: Optional[dict] = None,
+    ) -> ApiResponseData:
+        match self.state:
+            case Authenticated():
+                resp = cast(
+                    RequestsExecutor[Authenticated], self
+                )._execute_authenticated(endpoint, response_type, query_params)
+            case Guest():
+                resp = cast(RequestsExecutor[Guest], self)._execute_guest(
+                    endpoint, response_type, query_params
+                )
+            case _:
+                raise ValueError(f"Unknown auth state: {self.state}")
+
+        if not resp.Success:
+            raise HaasApiError(resp.Error or "Unknown error occurred")
+
+        assert resp.Data is not None
+        return resp.Data
+
+    def _execute_authenticated(
+        self: RequestsExecutor[Authenticated],
+        endpoint: HaasApiEndpoint,
+        response_type: Type[ApiResponseData],
+        query_params: Optional[dict] = None,
+    ) -> ApiResponse[ApiResponseData]:
+        if query_params is None:
+            query_params = {}
+        else:
+            query_params = copy.deepcopy(query_params)
+
+        query_params["userid"] = self.state.user_id
+        query_params["interfacekey"] = self.state.interface_key
+
+        return self._execute_inner(endpoint, response_type, query_params)
+
+    def _execute_guest(
+        self: RequestsExecutor[Guest],
+        endpoint: HaasApiEndpoint,
+        response_type: Type[ApiResponseData],
+        query_params: Optional[dict] = None,
+    ) -> ApiResponse[ApiResponseData]:
+        return self._execute_inner(endpoint, response_type, query_params)
+
+    def _execute_inner(
+        self,
+        endpoint: HaasApiEndpoint,
+        response_type: Type[ApiResponseData],
+        query_params: Optional[dict] = None,
+    ) -> ApiResponse[ApiResponseData]:
+        url = f"{self.protocol}://{self.host}:{self.port}/{endpoint}API.php"
+        log.debug(
+            f"[{self.state.__class__.__name__}]: Requesting {url=} with {query_params=}"
+        )
+        if query_params:
+            query_params = query_params.copy()
+            for key in query_params.keys():
+                value = query_params[key]
+                if isinstance(value, (str, int, float, bool, type(None))):
+                    continue
+
+                if isinstance(value, list):
+                    log.debug(f"Converting to JSON string list `{key}` field")
+                    query_params[key] = json.dumps(
+                        value, default=self._custom_encoder(by_alias=True)
+                    )
+
+                if isinstance(value, BaseModel):
+                    log.debug(f"Converting to JSON string pydantic `{key}` field")
+                    query_params[key] = value.model_dump_json(by_alias=True)
+
+        resp = requests.get(url, params=query_params)
+        resp.raise_for_status()
+
+        response_model = create_model(
+            f"DynamicApiResponse",
+            __base__=ApiResponse,
+            Data=(Optional[response_type], None)
+        )
+        ta = TypeAdapter(response_model)
+
         try:
-            response = self.execute(
-                endpoint="User",
-                response_type=Dict[str, Any],
-                query_params={
-                    "channel": "LOGIN",
-                    "email": email,
-                    "password": password
-                }
-            )
-            if not response.get('Success'):
-                raise HaasApiError(f"Authentication failed: {response.get('Error')}")
-            
-            user_id = response['Data']['UserId']
-            interface_key = response['Data']['InterfaceSecret']
-            authenticated_state = Authenticated(user_id=user_id, interface_key=interface_key)
-            return RequestsExecutor(state=authenticated_state)
-        except Exception as e:
-            logger.error(f"Authentication failed: {str(e)}")
-            raise HaasApiError(f"Authentication failed: {str(e)}")
+            return ta.validate_python(resp.json())
+        except ValidationError:
+            log.error(f"Failed to request: {resp.content}")
+            raise
 
-    def execute(self, endpoint: HaasApiEndpoint, response_type: Type[T], query_params: Optional[Dict[str, Any]] = None) -> T:
-        url = f"{self.base_url}/{endpoint}API.php"
-        headers: Dict[str, str] = {}
-        if isinstance(self.state, Authenticated):
-            query_params = query_params or {}
-            query_params.update({
-                "userid": self.state.user_id,
-                "interfacekey": self.state.interface_key
-            })
-        
-        logger.debug(f"Executing request: URL={url}, Params={query_params}")
-        try:
-            response = self.session.get(url, params=query_params, headers=headers)
-            response.raise_for_status()
-            data = response.json()
-            
-            logger.debug(f"Raw API response: {data}")
-            
-            if not data.get('Success'):
-                raise HaasApiError(f"API request failed: {data.get('Error')}")
-            
-            if isinstance(response_type, type) and issubclass(response_type, list):
-                return response_type(data.get('Data', []))
-            elif response_type == Dict[str, Any]:
-                return data
-            elif issubclass(response_type, ApiResponseData):
-                return response_type.parse_obj(data.get('Data', {}))
+    @staticmethod
+    def _custom_encoder(**kwargs):
+        def base_encoder(obj):
+            if isinstance(obj, BaseModel):
+                return obj.model_dump(**kwargs)
             else:
-                return data.get('Data')
-        except requests.RequestException as e:
-            logger.error(f"Request failed: {str(e)}")
-            raise HaasApiError(f"Request failed: {str(e)}")
-        except ValueError as e:
-            logger.error(f"Failed to parse response: {str(e)}")
-            raise HaasApiError(f"Failed to parse response: {str(e)}")
+                return pydantic_encoder(obj)
 
-__all__ = ['RequestsExecutor']
+        return base_encoder
+
+def get_all_markets_by_pricesource(executor: RequestsExecutor[Authenticated], price_source: str) -> List[CloudMarket]:
+    return executor.execute(
+        endpoint="Price",
+        response_type=List[CloudMarket],
+        query_params={"channel": "MARKETLIST", "pricesource": price_source},
+    )
+
+__all__ = ['RequestsExecutor', 'get_all_markets_by_pricesource', 'HaasApiError', 'Guest', 'Authenticated']

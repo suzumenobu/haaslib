@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import sys
 import os
-import dataclasses
-import enum
+from dataclasses import dataclass, field
 from typing import Any, Generic, Literal, Optional, Type, TypeVar, List, Union, Dict
 
 # Add the path to the Phyton_automatically_generated folder
@@ -59,7 +58,7 @@ except ImportError as e:
     
     T = TypeVar("T")
 
-@dataclasses.dataclass
+@dataclass
 class UserAccount:
     uid: str = Field(alias="UID")  # User ID (email)
     aid: str = Field(alias="AID")  # Account ID (hash)
@@ -152,15 +151,15 @@ class Market(BaseModel):
     def tag(self) -> str:
         return f"{self.price_source}:{self.symbol}"
 
-@dataclasses.dataclass
+@dataclass
 class CreateBotRequest:
-    bot_name: str
-    script: Union[Script, HaasScriptItemWithDependencies]
     account_id: str
-    market: CloudMarket
-    leverage: int = dataclasses.field(default=0)
-    interval: int = dataclasses.field(default=15)
-    chartstyle: int = dataclasses.field(default=301)
+    script_id: str
+    market: str
+    price_source: str
+    leverage: int = field(default=0)
+    interval: int = field(default=15)
+    chartstyle: int = field(default=301)
 
 class CreateLabRequest(BaseModel):
     script_id: str
@@ -187,7 +186,7 @@ class GetBacktestResultRequest(BaseModel):
     next_page_id: int
     page_lenght: int
 
-@dataclasses.dataclass
+@dataclass
 class AddBotFromLabRequest:
     lab_id: str
     backtest_id: str
@@ -280,3 +279,75 @@ class CloudMarket(BaseModel):
 
 class MarketList(BaseModel):
     root: List[MarketInformation] = Field(default_factory=list)
+
+@dataclass
+class ScriptInfo:
+    script_id: str
+    script_name: str
+    script_version: str
+    script_note: str
+
+@dataclass
+class LabConfig:
+    lab_details: UserLabDetails
+    market_info: MarketInfo
+
+@dataclass
+class ApiResponse:
+    success: bool
+    error: Optional[str] = None
+    data: Any = None
+
+# Import the automatically generated classes
+from .Phyton_automatically_generated.DataModel.HaasBot import HaasBot as AutoGenHaasBot
+from .Phyton_automatically_generated.DataModel.UserLabDetails import UserLabDetails as AutoGenUserLabDetails
+
+# Update HaasBot and UserLabDetails to use the automatically generated classes
+class HaasBot(AutoGenHaasBot, BaseModel):
+    # Add any additional fields or methods if needed
+    pass
+
+class UserLabDetails(AutoGenUserLabDetails, BaseModel):
+    # Add any additional fields or methods if needed
+    pass
+
+# Keep the existing MarketInfo, as it has some fields not present in the auto-generated classes
+@dataclass
+class MarketInfo:
+    symbol: str
+    base_asset: str
+    quote_asset: str
+    price_source: str
+    min_quantity: Optional[float] = None
+    max_quantity: Optional[float] = None
+    step_size: Optional[float] = None
+    min_notional: Optional[float] = None
+
+# Update ScriptInfo to match the fields in HaasBot
+@dataclass
+class ScriptInfo:
+    script_id: str
+    script_name: str
+    script_version: str
+    script_note: str
+
+# Update BotConfig to use the new HaasBot class
+@dataclass
+class BotConfig:
+    bot: HaasBot
+    market_info: MarketInfo
+
+# Update LabConfig to use the new UserLabDetails class
+@dataclass
+class LabConfig:
+    lab_details: UserLabDetails
+    market_info: MarketInfo
+
+# Keep the ApiResponse class as it's still useful
+@dataclass
+class ApiResponse:
+    success: bool
+    error: Optional[str] = None
+    data: Any = None
+
+# Add any other necessary classes or update existing ones...

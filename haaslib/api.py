@@ -18,25 +18,16 @@ from typing import (
     cast,
     List,
     Dict,
+    Union,
 )
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 
-try:
-    import requests
-except ImportError:
-    print("Error: The 'requests' library is not installed. Please install it using 'pip install requests'.")
-    sys.exit(1)
+import requests
+from pydantic import BaseModel, TypeAdapter, ValidationError, RootModel, Field
+from pydantic.json import pydantic_encoder
 
-try:
-    from pydantic import BaseModel, TypeAdapter, ValidationError, RootModel, Field
-    from pydantic.json import pydantic_encoder
-except ImportError:
-    print("Error: The 'pydantic' library is not installed. Please install it using 'pip install pydantic'.")
-    sys.exit(1)
-
-from haaslib.domain import HaaslibException
-from haaslib.logger import log
-from haaslib.model import (
+from .model import (
     AddBotFromLabRequest,
     ApiResponse,
     AuthenticatedSessionResponse,
@@ -60,6 +51,7 @@ from haaslib.model import (
     Account,
     AccountList,
 )
+from .config import config
 
 ApiResponseData = TypeVar(
     "ApiResponseData", bound=BaseModel | Collection[BaseModel] | bool | str
@@ -70,36 +62,43 @@ HaasApiEndpoint = Literal["Labs", "Account", "HaasScript", "Price", "User", "Bot
 """Known Haas API endpoints"""
 
 
+class HaaslibException(Exception):
+    """Base exception for haaslib."""
+    pass
+
+
 class HaasApiError(HaaslibException):
-    """
-    Base Excpetion for haaslib.
-    """
+    """Exception raised for errors in the API."""
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(self.message)
 
+
+class BaseState(ABC):
     pass
 
 
-class UserState(ABC):
+@dataclass
+class Guest(BaseState):
     pass
 
 
-class Guest(UserState):
-    pass
+@dataclass
+class Authenticated(BaseState):
+    user_id: str
+    interface_key: str
 
 
-class Authenticated(UserState):
-    def __init__(self, user_id: str, interface_key: str):
-        self.user_id: str = user_id
-        self.interface_key: str = interface_key
+S = TypeVar('S', bound=BaseState)
 
 
-State = TypeVar("State", bound=UserState)
-"""Generic to mark user session typ"""
-
-
-class SyncExecutor(Protocol, Generic[State]):
+class SyncExecutor(Generic[S]):
     """
     Main protocol for interaction with HaasAPI.
     """
+
+    def __init__(self, state: S):
+        self.state = state
 
     @abstractmethod
     def execute(self, endpoint: HaasApiEndpoint, response_type: Type[ApiResponseData], query_params: Optional[dict] = None) -> ApiResponseData:
@@ -110,8 +109,8 @@ class SyncExecutor(Protocol, Generic[State]):
         pass
 
 
-@dataclasses.dataclass(kw_only=True, frozen=True, slots=True)
-class RequestsExecutor(Generic[State]):
+@dataclass(kw_only=True, frozen=True, slots=True)
+class RequestsExecutor(SyncExecutor[BaseState]):
     """First implementation of `SyncExecutor` based on `requests` library."""
 
     host: str
@@ -119,12 +118,6 @@ class RequestsExecutor(Generic[State]):
 
     port: int
     """ Port of the Haas API."""
-
-    state: State
-    """ User session state."""
-
-    protocol: str = "http"  # Change this from "https" to "http"
-    """Communication protocol (currently only http is valid)."""
 
     def authenticate(self, email: str, password: str) -> 'RequestsExecutor[Authenticated]':
         interface_key = "".join(f"{random.randint(0, 100)}" for _ in range(10))
@@ -191,9 +184,6 @@ class RequestsExecutor(Generic[State]):
         """
         resp = self._execute_authenticated(endpoint, response_type, query_params)
         
-        # Remove this print statement
-        # print(f"Raw API response: {resp}")  
-        
         if isinstance(resp, dict) and 'Success' in resp:
             if not resp['Success']:
                 raise HaasApiError(f"API returned error: {resp.get('Error', 'Unknown error')}")
@@ -211,8 +201,9 @@ class RequestsExecutor(Generic[State]):
         else:
             query_params = copy.deepcopy(query_params)
 
-        query_params["userid"] = self.state.user_id
-        query_params["interfacekey"] = self.state.interface_key
+        if isinstance(self.state, Authenticated):
+            query_params["userid"] = self.state.user_id
+            query_params["interfacekey"] = self.state.interface_key
 
         return self._execute_inner(endpoint, response_type, query_params)
 
@@ -224,8 +215,6 @@ class RequestsExecutor(Generic[State]):
     ) -> ApiResponse[ApiResponseData]:
         if query_params is None:
             query_params = {}
-        # Remove this line:
-        # query_params.pop('interfacekey', None)
         return self._execute_inner(endpoint, response_type, query_params)
 
     def _execute_inner(
@@ -563,6 +552,15 @@ def get_all_bots(executor: SyncExecutor[Authenticated]) -> list[HaasBot]:
         response_type=list[HaasBot],
         query_params={"channel": "GET_BOTS"},
     )
+
+
+
+
+
+
+
+
+
 
 
 

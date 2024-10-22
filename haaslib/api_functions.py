@@ -20,6 +20,7 @@ from typing import List, Dict, Any
 from .logging_config import logger
 from .api import HaasApiError
 from .Phyton_automatically_generated.DataModel.MarketInformation import MarketInformation
+import random
 
 def get_all_markets(executor: SyncExecutor[Authenticated]) -> List[MarketInformation]:
     logger.info("Fetching all markets")
@@ -143,6 +144,49 @@ def get_trading_pairs(executor: SyncExecutor[Authenticated]) -> list[CloudMarket
         response_type=list[CloudMarket],
         query_params={"channel": "GET_TRADING_PAIRS"},
     )
+
+def get_random_account(executor: SyncExecutor[Authenticated]) -> UserAccount:
+    """
+    Retrieves a random account from the user's available accounts.
+    
+    :param executor: Authenticated executor for API interaction
+    :return: A randomly selected UserAccount
+    :raises HaasApiError: If no accounts are available
+    """
+    accounts = get_accounts(executor)
+    if not accounts.Data:
+        raise HaasApiError("No accounts available")
+    return random.choice(accounts.Data)
+
+def get_random_market(executor: SyncExecutor[Authenticated]) -> MarketInformation:
+    """
+    Retrieves a random market from the available markets.
+    
+    :param executor: Authenticated executor for API interaction
+    :return: A randomly selected MarketInformation
+    :raises HaasApiError: If no markets are available
+    """
+    markets = get_all_markets(executor)
+    if not markets.root:
+        raise HaasApiError("No markets available")
+    return random.choice(markets.root)
+
+def get_random_configuration(executor: SyncExecutor[Authenticated]) -> dict:
+    """
+    Retrieves a random configuration including account, script, and market.
+    
+    :param executor: Authenticated executor for API interaction
+    :return: A dictionary containing randomly selected account, script, and market
+    :raises HaasApiError: If any component is not available
+    """
+    try:
+        return {
+            "account": get_random_account(executor),
+            "script": get_random_script(executor),
+            "market": get_random_market(executor)
+        }
+    except HaasApiError as e:
+        raise HaasApiError(f"Failed to get random configuration: {str(e)}")
 
 # Add other functions that are being imported in __init__.py
 

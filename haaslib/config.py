@@ -1,13 +1,13 @@
 import os
 from dotenv import load_dotenv
 
+# Load the .env file
 load_dotenv()
 
 class Config:
-    API_HOST: str = os.getenv('HAAS_API_HOST', '127.0.0.1')
-    API_PORT: int = int(os.getenv('HAAS_API_PORT', '8090'))
-    API_EMAIL: str = os.getenv('HAAS_API_EMAIL', '')
-    API_PASSWORD: str = os.getenv('HAAS_API_PASSWORD', '')
-    BASE_URL: str = f"http://{API_HOST}:{API_PORT}"  # Changed to HTTP
+    API_HOST = os.getenv('HAAS_API_HOST', '127.0.0.1')
+    API_PORT = int(os.getenv('HAAS_API_PORT', '8090'))
+    API_EMAIL = os.getenv('HAAS_API_EMAIL')
+    API_PASSWORD = os.getenv('HAAS_API_PASSWORD')
 
 config = Config()

@@ -65,3 +65,42 @@ class LabExecutionUpdate(BaseModel):
 
 class BacktestResult(BaseModel):
     pass
+
+class CloudMarket(BaseModel):
+    price_source: str = Field(alias="PriceSource")
+    primary: str = Field(alias="Primary")
+    secondary: str = Field(alias="Secondary")
+    contract_name: str = Field(alias="ContractName")
+    short_name: str = Field(alias="ShortName")
+    wallet_tag: str = Field(alias="WalletTag")
+
+class CloudTradeMarket(BaseModel):
+    normalized_primary: str = Field(alias="NormalizedPrimary")
+    normalized_secondary: str = Field(alias="NormalizedSecondary")
+    normalized_margin_currency: str = Field(alias="NormalizedMarginCurrency")
+    exchange_symbol: str = Field(alias="ExchangeSymbol")
+    web_socket_symbol: str = Field(alias="WebSocketSymbol")
+    exchange_value: float = Field(alias="ExchangeValue")
+    exchange_values: List[float] = Field(alias="ExchangeValues")
+    price_step: float = Field(alias="PriceStep")
+    price_decimals: int = Field(alias="PriceDecimals")
+    amount_step: float = Field(alias="AmountStep")
+    amount_decimals: int = Field(alias="AmountDecimals")
+    price_decimal_type: str = Field(alias="PriceDecimalType")
+    amount_decimal_type: str = Field(alias="AmountDecimalType")
+    makers_fee: float = Field(alias="MakersFee")
+    takers_fee: float = Field(alias="TakersFee")
+    minimum_trade_amount: float = Field(alias="MinimumTradeAmount")
+    minimum_trade_volume: float = Field(alias="MinimumTradeVolume")
+    is_open: bool = Field(alias="IsOpen")
+    is_margin: bool = Field(alias="IsMargin")
+    contract_details: Any = Field(alias="ContractDetails")
+    margin_currency: str = Field(alias="MarginCurrency")
+    amount_label: str = Field(alias="AmountLabel")
+    profit_label: str = Field(alias="ProfitLabel")
+    price_source: str = Field(alias="PriceSource")
+    primary: str = Field(alias="Primary")
+    secondary: str = Field(alias="Secondary")
+    contract_name: str = Field(alias="ContractName")
+    short_name: str = Field(alias="ShortName")
+    wallet_tag: str = Field(alias="WalletTag")
