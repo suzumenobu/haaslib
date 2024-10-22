@@ -7,3 +7,4 @@ pyrightconfig.json
 /test_outputs
 .DS_Store
 .env
+haaslib.log
