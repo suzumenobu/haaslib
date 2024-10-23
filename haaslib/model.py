@@ -5,14 +5,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Any, Generic, Literal, Optional, Type, TypeVar, List, Union, Dict
 
-# Add the path to the Phyton_automatically_generated folder
-current_dir = os.path.dirname(os.path.abspath(__file__))
-auto_gen_path = os.path.join(current_dir, 'Phyton_automatically_generated')
-sys.path.append(auto_gen_path)
-
-print(f"Python version: {sys.version}")
-print(f"Python path: {sys.path}")
-
+# Import pydantic first
 try:
     from pydantic import BaseModel, Field, ConfigDict
     print("Pydantic imported successfully")
@@ -26,15 +19,134 @@ except ImportError as e:
     def Field(*args, **kwargs):
         return None
 
-from haaslib.domain import MarketTag, Script
+# Then define TypeVars using BaseModel
+T = TypeVar('T')
+ApiResponseData = TypeVar(
+    'ApiResponseData',
+    bound=Union[BaseModel, List[BaseModel], bool, str, Dict[str, Any]]
+)
+
+# Add the path to the Phyton_automatically_generated folder
+current_dir = os.path.dirname(os.path.abspath(__file__))
+auto_gen_path = os.path.join(current_dir, 'Phyton_automatically_generated')
+sys.path.append(auto_gen_path)
+
+# Base API Response
+class ApiResponse(BaseModel, Generic[T]):
+    Success: bool
+    Error: Optional[str] = None
+    Data: Optional[T] = None
+
+    class Config:
+        populate_by_name = True
+
+ModelApiResponse = ApiResponse
+
+# Account Models
+class AccountData(BaseModel):
+    balances: List[Any] = Field(alias="Balances")
+    orders: List[Any] = Field(alias="Orders")
+    positions: List[Any] = Field(alias="Positions")
+    trades: List[Any] = Field(alias="Trades")
+
+class AccountBalance(BaseModel):
+    account_id: str = Field(alias="AccountId")
+    balance: float = Field(alias="Balance")
+    currency: str = Field(alias="Currency")
+
+class AccountList(BaseModel):
+    root: List[AccountData]
+
+# Market Models
+class CloudMarket(BaseModel):
+    id: str
+    name: str
+    price_source: str
+    # Add other fields as needed
+
+    class Config:
+        populate_by_name = True
+
+class MarketList(BaseModel):
+    root: List[CloudMarket] = Field(default_factory=list)
+    
+    class Config:
+        populate_by_name = True
+
+# Lab Models
+class LabConfig(BaseModel):
+    max_population: int = Field(alias="MP")
+    max_generations: int = Field(alias="MG")
+    max_elites: int = Field(alias="ME")
+    mix_rate: float = Field(alias="MR")
+    adjust_rate: float = Field(alias="AR")
+
+class LabSettings(BaseModel):
+    bot_id: Optional[str] = Field(alias="botId")
+    bot_name: Optional[str] = Field(alias="botName")
+    account_id: Optional[str] = Field(alias="accountId")
+    market_tag: Optional[str] = Field(alias="marketTag")
+    position_mode: int = Field(alias="positionMode")
+    margin_mode: int = Field(alias="marginMode")
+    leverage: float = Field(alias="leverage")
+    trade_amount: float = Field(alias="tradeAmount")
+    interval: int = Field(alias="interval")
+    chart_style: int = Field(alias="chartStyle")
+    order_template: int = Field(alias="orderTemplate")
+    script_parameters: Any = Field(alias="scriptParameters")
+
+# Request Models
+class CreateLabRequest(BaseModel):
+    script_id: str
+    name: str
+    account_id: str
+    market: str
+    interval: int
+    default_price_data_style: str
+
+class GetBacktestResultRequest(BaseModel):
+    lab_id: str
+
+class StartLabExecutionRequest(BaseModel):
+    lab_id: str
+
+class AddBotFromLabRequest(BaseModel):
+    lab_id: str
+
+class CreateBotRequest(BaseModel):
+    pass  # Add fields as needed
+
+# Response Models
+class UserLabBacktestResult(BaseModel):
+    pass  # Add fields as needed
+
+class UserLabDetails(BaseModel):
+    lab_id: str
+    status: int
+
+class UserLabRecord(BaseModel):
+    pass  # Add fields as needed
+
+class HaasBot(BaseModel):
+    pass  # Add fields as needed
+
+class HaasScriptItemWithDependencies(BaseModel):
+    script_id: str
+    name: str
+
+class PaginatedResponse(BaseModel, Generic[T]):
+    items: List[T]
+    total: int
+    page: int
+    page_size: int
 
 # Import classes from Phyton_automatically_generated folder
 try:
-    from DataModel.HaasBot import HaasBot
-    from DataModel.LicenseDetails import LicenseDetails
-    from DataModel.UserLabDetails import UserLabDetails
-    from DataModel.UserLabRecord import UserLabRecord
-    from DataModel.UserAccount import UserAccount
+    from .Phyton_automatically_generated.DataModel.HaasBot import HaasBot
+    from .Phyton_automatically_generated.DataModel.LicenseProfile import LicenseProfile  # Changed from LicenseDetails
+    from .Phyton_automatically_generated.DataModel.UserLabDetails import UserLabDetails
+    from .Phyton_automatically_generated.DataModel.UserLabRecord import UserLabRecord
+    from .Phyton_automatically_generated.DataModel.UserAccount import UserAccount
     print("Successfully imported classes from Phyton_automatically_generated")
 except ImportError as e:
     print(f"Failed to import classes from Phyton_automatically_generated: {e}")
@@ -44,53 +156,29 @@ except ImportError as e:
     class HaasBot(BaseModel):
         pass
     
-    class LicenseDetails(BaseModel):
-        pass
-    
-    class UserLabDetails(BaseModel):
-        pass
-    
-    class UserLabRecord(BaseModel):
-        pass
-    
-    class UserAccount(BaseModel):
-        pass
-    
-    T = TypeVar("T")
+    class LicenseProfile(BaseModel):  # Changed from LicenseDetails
+        LicenseName: str = ""
+        ValidUntill: int = 0
+        Rights: List[Any] = Field(default_factory=list)
+        Enterprise: bool = False
+        AllowedExchanges: List[Any] = Field(default_factory=list)
+        MaxBots: int = 0
+        MaxSimulatedAccounts: int = 0
+        MaxRealAccounts: int = 0
+        MaxDashboards: int = 0
+        MaxBacktestMonths: int = 0
+        RentedSignals: List[Any] = Field(default_factory=list)
+        RentedStrategies: List[Any] = Field(default_factory=list)
+        HireSignalsEnabled: bool = False
+        HireStrategiesEnabled: bool = False
+        HaasLabsEnabled: bool = False
+        ResellSignalsEnabled: bool = False
+        MarketDetailsEnabled: bool = False
+        LocalAPIEnabled: bool = False
+        ScriptedExchangesEnabled: bool = False
+        MachinelearningEnabled: bool = False
 
-@dataclass
-class UserAccount:
-    uid: str = Field(alias="UID")  # User ID (email)
-    aid: str = Field(alias="AID")  # Account ID (hash)
-    name: str = Field(alias="N")   # Account name
-    exchange_code: str = Field(alias="EC")  # Exchange code (e.g., BINANCEQUARTERLY)
-    exchange_type: int = Field(alias="ET")  # Exchange type (numeric)
-    status: int = Field(alias="S")  # Account status
-    is_simulated: bool = Field(alias="IS")  # Is simulated account
-    is_test: bool = Field(alias="IT")  # Is test account
-    paper_account: bool = Field(alias="PA")  # Is paper trading account
-    watchlist: bool = Field(alias="WL")  # Is watchlist
-    position_mode: int = Field(alias="PM")  # Position mode
-    margin_source: Optional[str] = Field(alias="MS")  # Margin source
-    version: int = Field(alias="V")  # Version
-
-    class Config:
-        allow_population_by_field_name = True
-        extra = "ignore"
-
-    @property
-    def account_id(self) -> str:
-        return self.aid
-
-    @property
-    def user_id(self) -> str:
-        return self.uid
-
-class ApiResponse(BaseModel, Generic[T]):
-    Success: bool
-    Error: str
-    Data: T
-
+# Update AuthenticatedSessionResponseData to use LicenseProfile
 class AuthenticatedSessionResponseData(BaseModel):
     UserId: str
     Username: Optional[str]
@@ -98,256 +186,40 @@ class AuthenticatedSessionResponseData(BaseModel):
     UserRights: int
     IsAffiliate: bool
     IsProductSeller: bool
-    LicenseDetails: LicenseDetails
+    LicenseDetails: LicenseProfile  # Using LicenseProfile instead of LicenseDetails
     SupportHash: Optional[str]
 
-class AuthenticatedSessionResponse(BaseModel):
-    R: int
-    D: AuthenticatedSessionResponseData
-    DID: str
+# ... rest of your existing model classes ...
 
-class HaasScriptItemWithDependencies(BaseModel):
-    dependencies: list[str] = Field(alias="D")
-    user_id: str = Field(alias="UID")
-    script_id: str = Field(alias="SID")
-    script_name: str = Field(alias="SN")
-    script_description: str = Field(alias="SD")
-    script_type: int = Field(alias="ST")
-    script_status: int = Field(alias="SS")
-    command_name: str = Field(alias="CN")
-    is_command: bool = Field(alias="IC")
-    is_valid: bool = Field(alias="IV")
-    created_unix: int = Field(alias="CU")
-    updated_unix: int = Field(alias="UU")
-    folder_id: int = Field(alias="FID")
+# Remove any duplicate ApiResponse definitions
+# Remove @dataclass ApiResponse
+# Remove class ApiResponse with __init__
 
-    @property
-    def id(self) -> str:
-        return self.script_id
-
-    @property
-    def type(self) -> int:
-        return self.script_type
-
-class CloudMarket(BaseModel):
-    symbol: str
-    base_asset: str
-    quote_asset: str
-    price_source: str
-
-    class Config:
-        allow_population_by_field_name = True
-
-class Market(BaseModel):
-    symbol: str = Field(alias="S")
-    base_asset: str = Field(alias="B")
-    quote_asset: str = Field(alias="Q")
-    price_source: str = Field(alias="P")
-
-    class Config:
-        populate_by_name = True
-
-    @property
-    def tag(self) -> str:
-        return f"{self.price_source}:{self.symbol}"
-
-@dataclass
-class CreateBotRequest:
-    account_id: str
-    script_id: str
-    market: str
-    price_source: str
-    leverage: int = field(default=0)
-    interval: int = field(default=15)
-    chartstyle: int = field(default=301)
-
-class CreateLabRequest(BaseModel):
-    script_id: str
-    name: str
-    account_id: str
-    market: str
-    interval: int
-    default_price_data_style: PriceDataStyle
-
-    @classmethod
-    def from_market_tag(cls, script_id: str, account_id: str, market: MarketTag, interval: int, default_price_data_style: PriceDataStyle):
-        name = f"{interval}_{market.tag}_{script_id}_{account_id}"
-        return cls(
-            script_id=script_id,
-            account_id=account_id,
-            market=market.tag,
-            interval=interval,
-            default_price_data_style=default_price_data_style,
-            name=name,
-        )
-
-class GetBacktestResultRequest(BaseModel):
-    lab_id: str
-    next_page_id: int
-    page_lenght: int
-
-@dataclass
-class AddBotFromLabRequest:
-    lab_id: str
-    backtest_id: str
-    bot_name: str
-    account_id: str
-    market: CloudMarket
-    leverage: int = 0
-
-class StartLabExecutionRequest(BaseModel):
-    lab_id: str
-    start_unix: int
-    end_unix: int
-    send_email: bool
-
-class PaginatedResponse(BaseModel, Generic[T]):
-    items: List[T] = Field(alias="I")
-    next_page_id: int = Field(alias="NP")
-
-class UserLabBacktestResult(BaseModel):
-    # Define the fields for UserLabBacktestResult here
-    pass
-
-# Add any other classes that are not imported from Phyton_automatically_generated
-
-class LoginResponse(ApiResponse[AuthenticatedSessionResponse]):
-    pass
-
-class Account(BaseModel):
-    uid: str = Field(alias="UID")
-    aid: str = Field(alias="AID")
-    name: str = Field(alias="N")
-    exchange_code: str = Field(alias="EC")
-    exchange_type: int = Field(alias="ET")
-    status: int = Field(alias="S")
-    is_simulated: bool = Field(alias="IS")
-    is_test: bool = Field(alias="IT")
-    paper_account: bool = Field(alias="PA")
-    watchlist: bool = Field(alias="WL")
-    position_mode: int = Field(alias="PM")
-    margin_source: Optional[str] = Field(alias="MS")
-    version: int = Field(alias="V")
-
-class UserLabDetails(BaseModel):
-    lab_id: str
-    script_id: str
-    name: str
-    interval: int
-    default_price_data_style: str
-    market: str
-    account_id: Optional[str]
-    style: str
-    parameters: Dict[str, Any]
-    haas_script_settings: Dict[str, Any]
-    user_lab_config: Dict[str, Any]
-    algorithm: str
-
-class UserAccount(BaseModel):
-    aid: str
-    uid: str
-    name: str
-    exchange: str
-    status: int = Field(alias="S")
-    is_simulated: bool = Field(alias="IS")
-    is_test: bool = Field(alias="IT")
-    paper_account: bool = Field(alias="PA")
-    watchlist: bool = Field(alias="WL")
-    position_mode: int = Field(alias="PM")
-    margin_source: Optional[str] = Field(alias="MS")
-    version: int = Field(alias="V")
-
-    class Config:
-        allow_population_by_field_name = True
-        extra = "ignore"
-
-class AccountList(BaseModel):
-    Data: List[UserAccount] = Field(default_factory=list)
-
-from typing import List
-from pydantic import BaseModel, Field
-from .Phyton_automatically_generated.DataModel.MarketInformation import MarketInformation
-
-class CloudMarket(BaseModel):
-    symbol: str
-    base_asset: str
-    quote_asset: str
-    price_source: str
-
-    class Config:
-        allow_population_by_field_name = True
-
-class MarketList(BaseModel):
-    root: List[MarketInformation] = Field(default_factory=list)
-
-@dataclass
-class ScriptInfo:
-    script_id: str
-    script_name: str
-    script_version: str
-    script_note: str
-
-@dataclass
-class LabConfig:
-    lab_details: UserLabDetails
-    market_info: MarketInfo
-
-@dataclass
-class ApiResponse:
-    success: bool
-    error: Optional[str] = None
-    data: Any = None
-
-# Import the automatically generated classes
-from .Phyton_automatically_generated.DataModel.HaasBot import HaasBot as AutoGenHaasBot
-from .Phyton_automatically_generated.DataModel.UserLabDetails import UserLabDetails as AutoGenUserLabDetails
-
-# Update HaasBot and UserLabDetails to use the automatically generated classes
-class HaasBot(AutoGenHaasBot, BaseModel):
-    # Add any additional fields or methods if needed
-    pass
-
-class UserLabDetails(AutoGenUserLabDetails, BaseModel):
-    # Add any additional fields or methods if needed
-    pass
-
-# Keep the existing MarketInfo, as it has some fields not present in the auto-generated classes
-@dataclass
-class MarketInfo:
-    symbol: str
-    base_asset: str
-    quote_asset: str
-    price_source: str
-    min_quantity: Optional[float] = None
-    max_quantity: Optional[float] = None
-    step_size: Optional[float] = None
-    min_notional: Optional[float] = None
-
-# Update ScriptInfo to match the fields in HaasBot
-@dataclass
-class ScriptInfo:
-    script_id: str
-    script_name: str
-    script_version: str
-    script_note: str
-
-# Update BotConfig to use the new HaasBot class
-@dataclass
-class BotConfig:
-    bot: HaasBot
-    market_info: MarketInfo
-
-# Update LabConfig to use the new UserLabDetails class
-@dataclass
-class LabConfig:
-    lab_details: UserLabDetails
-    market_info: MarketInfo
-
-# Keep the ApiResponse class as it's still useful
-@dataclass
-class ApiResponse:
-    success: bool
-    error: Optional[str] = None
-    data: Any = None
-
-# Add any other necessary classes or update existing ones...
+# At the end of the file, ensure we're exporting the correct names
+__all__ = [
+    'ApiResponse',
+    'ModelApiResponse',
+    'AccountData',
+    'AccountBalance',
+    'AccountList',
+    'CloudMarket',
+    'MarketList',
+    'LabConfig',
+    'LabSettings',
+    'CreateLabRequest',
+    'GetBacktestResultRequest',
+    'StartLabExecutionRequest',
+    'AddBotFromLabRequest',
+    'CreateBotRequest',
+    'UserLabBacktestResult',
+    'UserLabDetails',
+    'UserLabRecord',
+    'HaasBot',
+    'HaasScriptItemWithDependencies',
+    'PaginatedResponse',
+    'T',
+    'ApiResponseData',
+    'LicenseProfile',  # Changed from LicenseDetails
+    'AuthenticatedSessionResponseData',
+    # ... other exports ...
+]

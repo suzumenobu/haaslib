@@ -1,62 +1,51 @@
 import dataclasses
-import random
 import time
-from contextlib import contextmanager
 from typing import Generator, Iterable, Sequence
 
-from haaslib import api, iterable_extensions
-from haaslib.api import Authenticated, SyncExecutor
-from haaslib.domain import BacktestPeriod, MarketTag
-from haaslib.model import (
+from .api import get_lab_details
+from .executor import Authenticated, RequestsExecutor
+from .model import (
     CreateLabRequest,
     GetBacktestResultRequest,
-    PaginatedResponse,
-    StartLabExecutionRequest,
     UserLabBacktestResult,
-    UserLabParameter,
-    UserLabParameterOption,
-    UserLabStatus,
+    UserLabDetails,
+    LabSettings,
 )
 
 
 @dataclasses.dataclass
 class ChangeHaasScriptParameterRequest:
     name: str
-    options: list[UserLabParameterOption]
+    options: list[Any]  # Replace with proper type when available
 
 
 def update_params(
-    settings: Sequence[UserLabParameter],
+    settings: Sequence[LabSettings],
     params: Iterable[ChangeHaasScriptParameterRequest],
 ):
     for param in params:
         param_name = param.name.lower()
-        setting_idx = iterable_extensions.find_idx(
-            settings, lambda s: param_name in s.key.lower()
+        setting_idx = next(
+            (i for i, s in enumerate(settings) if param_name in s.bot_name.lower()),
+            None
         )
 
         if setting_idx is None:
-            raise ValueError(f"Failed to find setting for changer haas script {param=}")
+            raise ValueError(f"Failed to find setting for parameter {param.name}")
 
-        settings[setting_idx].options = param.options
+        settings[setting_idx].script_parameters = param.options
 
 
-def wait_for_execution(executor: SyncExecutor[Authenticated], lab_id: str):
+def wait_for_execution(executor: RequestsExecutor[Authenticated], lab_id: str):
     while True:
-        details = api.get_lab_details(executor, lab_id)
-        match details.status:
-            case UserLabStatus.COMPLETED:
-                break
-            case UserLabStatus.CANCELLED:
-                break
-            case _:
-                pass
-
+        details = get_lab_details(executor, lab_id)
+        if details.status in (2, 3):  # Completed or Cancelled
+            break
         time.sleep(5)
 
 
 def backtest(
-    executor: SyncExecutor[Authenticated], lab_id: str, period: BacktestPeriod
+    executor: RequestsExecutor[Authenticated], lab_id: str, period: BacktestPeriod
 ) -> PaginatedResponse[UserLabBacktestResult]:
     api.start_lab_execution(
         executor,
@@ -78,7 +67,7 @@ def backtest(
 
 @contextmanager
 def get_lab_default_params(
-    executor: SyncExecutor[Authenticated], script_id: str
+    executor: RequestsExecutor[Authenticated], script_id: str
 ) -> Generator[list[UserLabParameter], None, None]:
     """
     Creates buffer lab to get it's default parameters options
@@ -105,3 +94,4 @@ def get_lab_default_params(
     yield lab_details.parameters
 
     api.delete_lab(executor, lab_details.lab_id)
+
