@@ -58,20 +58,7 @@ class AccountList(BaseModel):
     root: List[AccountData]
 
 # Market Models
-class CloudMarket(BaseModel):
-    id: str
-    name: str
-    price_source: str
-    # Add other fields as needed
-
-    class Config:
-        populate_by_name = True
-
-class MarketList(BaseModel):
-    root: List[CloudMarket] = Field(default_factory=list)
-    
-    class Config:
-        populate_by_name = True
+from .models.market import CloudMarket, MarketList
 
 # Lab Models
 class LabConfig(BaseModel):
