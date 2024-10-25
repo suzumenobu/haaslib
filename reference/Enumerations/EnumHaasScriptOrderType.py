@@ -6,7 +6,7 @@ from enum import Enum
 
 class EnumHaasScriptOrderType(Enum):
   Limit = 500
-  Market = 501
+  CloudMarket = 501
   NoTimeout = 502
   MakerOrCancel = 503
   StopLimit = 504

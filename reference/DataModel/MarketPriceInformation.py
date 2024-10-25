@@ -4,5 +4,5 @@ from typing import Any
 @dataclasses.dataclass
 class MarketPriceInformation:
     Timestamp: int
-    Market: str
+    CloudMarket: str
     Statistics: Any

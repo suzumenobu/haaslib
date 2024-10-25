@@ -6,7 +6,7 @@ from enum import Enum
 
 class EnumHaasOrderType(Enum):
   Limit = 0
-  Market = 1
+  CloudMarket = 1
   StopLimit = 2
   StopMarket = 3
   TakeProfitLimit = 4

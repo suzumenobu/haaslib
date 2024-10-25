@@ -9,7 +9,7 @@ class HaasScriptSettings:
   BotId: TradeServer.Cluster.WebServer.Servers.RestServerInterface.PublicWebInputDefinition
   BotName: TradeServer.Cluster.WebServer.Servers.RestServerInterface.PublicWebInputDefinition
   AccountId: TradeServer.Cluster.WebServer.Servers.RestServerInterface.PublicWebInputDefinition
-  Market: TradeServer.Cluster.WebServer.Servers.RestServerInterface.PublicWebInputDefinition
+  CloudMarket: TradeServer.Cluster.WebServer.Servers.RestServerInterface.PublicWebInputDefinition
   PositionMode: TradeServer.Cluster.WebServer.Servers.RestServerInterface.PublicWebInputDefinition
   MarginMode: TradeServer.Cluster.WebServer.Servers.RestServerInterface.PublicWebInputDefinition
   Leverage: TradeServer.Cluster.WebServer.Servers.RestServerInterface.PublicWebInputDefinition

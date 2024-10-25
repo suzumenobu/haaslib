@@ -6,7 +6,7 @@ from .executor import RequestsExecutor, Authenticated, Guest, HaasApiError
 from .model import (
     CloudMarket,
     AccountList,
-    MarketList,
+    MarketListResponse,
     UserLabDetails,
     GetBacktestResultRequest,
     UserLabBacktestResult,
@@ -15,11 +15,11 @@ from .model import (
     HaasScriptItemWithDependencies,
     ApiResponse,
 )
-from .models.market import Market, MarketListResponse
+from .models.market import CloudMarket, MarketListResponse
 
 log = logging.getLogger(__name__)
 
-def get_all_markets(executor: RequestsExecutor) -> List[Market]:
+def get_all_markets(executor: RequestsExecutor) -> List[CloudMarket]:
     """Get all available markets"""
     response = executor.execute(
         endpoint="Price",
@@ -36,7 +36,7 @@ def get_all_markets_by_pricesource(executor: RequestsExecutor, price_source: str
     markets = get_all_markets(executor)
     
     # Validate the markets data
-    if not isinstance(markets, MarketList):
+    if not isinstance(markets, MarketListResponse):
         raise HaasApiError(f"Unexpected markets format: {markets}")
     
     return [

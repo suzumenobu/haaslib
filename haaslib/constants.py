@@ -14,7 +14,7 @@ class TimeInForce(Enum):
     FOK = "FOK"  # Fill or Kill
 
 class MarketType(Enum):
-    """Market types"""
+    """CloudMarket types"""
     SPOT = "SPOT"
     FUTURES = "FUTURES"
     MARGIN = "MARGIN"

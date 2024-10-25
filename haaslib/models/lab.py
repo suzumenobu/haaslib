@@ -89,7 +89,7 @@ class UserLabRecord(BaseModel):
     name: str = Field(alias="Name")
     script_id: str = Field(alias="ScriptId")
     account_id: str = Field(alias="AccountId")
-    market: str = Field(alias="Market")
+    market: str = Field(alias="CloudMarket")
     status: str = Field(alias="Status")
     created_at: int = Field(alias="CreatedAt")
     updated_at: int = Field(alias="UpdatedAt")

@@ -1,0 +1,80 @@
+* HaasLib
+A Python library for interacting with the Haasonline Trading Server API.
+
+** Installation
+#+begin_src bash
+pip install haaslib
+#+end_src
+
+** Quick Start
+#+begin_src python
+from haaslib import HaasApi
+from haaslib.models import CloudMarket
+
+# Initialize the API client
+api = HaasApi(
+    base_url="YOUR_SERVER_URL",
+    email="YOUR_EMAIL",
+    password="YOUR_PASSWORD"
+)
+
+# Get list of available markets
+markets = api.get_markets()
+#+end_src
+
+** Project Structure
+#+begin_src
+haaslib/
+├── __init__.py           # Package initialization
+├── api.py               # Main API client
+├── api/                 # API endpoints
+│   ├── __init__.py
+│   └── price.py        # Price-related endpoints
+├── models/             # Data models
+│   ├── __init__.py
+│   ├── market.py       # CloudMarket-related models
+│   ├── market_data.py  # Extended market data models
+│   └── base.py         # Base model definitions
+└── test/              # Test suite
+    └── test_models.py
+#+end_src
+
+** Architecture
+*** Core Components
+**** API Client
+- =HaasApi=: Main client class for interacting with the API
+- Handles authentication and request execution
+- Provides high-level methods for API operations
+
+**** Models
+- Pydantic models for type-safe data handling
+- Automatic validation and serialization
+- Field aliases for API compatibility
+
+**** Executors
+- =RequestsExecutor=: Handles HTTP requests
+- Supports both authenticated and guest operations
+- Manages rate limiting and retries
+
+** Development
+*** Setup Development Environment
+#+begin_src bash
+# Clone the repository
+git clone https://github.com/yourusername/haaslib.git
+cd haaslib
+
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+#+end_src
+
+*** Running Tests
+#+begin_src bash
+python -m unittest discover
+#+end_src
+
+** License
+MIT License - See LICENSE file for details

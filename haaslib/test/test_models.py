@@ -1,6 +1,6 @@
 import unittest
 # Update import to use consolidated version
-from ..models.market import CloudMarket, MarketList, Market, MarketListResponse
+from ..models.market import CloudMarket, MarketListResponse, CloudMarket, MarketListResponse
 from ..domain import MarketTag
 
 class TestModels(unittest.TestCase):
@@ -19,7 +19,7 @@ class TestModels(unittest.TestCase):
         self.assertEqual(market.as_market_tag(), "BINANCE_BTC_USDT_SPOT")
 
     def test_market_list(self):
-        """Test MarketList model"""
+        """Test MarketListResponse model"""
         markets_data = {
             "root": [
                 {
@@ -32,7 +32,7 @@ class TestModels(unittest.TestCase):
                 }
             ]
         }
-        market_list = MarketList(**markets_data)
+        market_list = MarketListResponse(**markets_data)
         self.assertEqual(len(market_list.root), 1)
         self.assertIsInstance(market_list.root[0], CloudMarket)
 
@@ -51,12 +51,12 @@ class TestModels(unittest.TestCase):
         self.assertEqual(request.interval, 15)
 
     def test_market(self):
-        """Test Market model"""
+        """Test CloudMarket model"""
         market_data = {
             "PS": "BINANCE",
             "P": "BTC",
             "S": "USDT",
             "C": ""
         }
-        market = Market(**market_data)
+        market = CloudMarket(**market_data)
         self.assertEqual(market.market_name, "BINANCE_BTC_USDT")

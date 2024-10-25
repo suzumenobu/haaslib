@@ -7,7 +7,7 @@ class UserOrderExecutionRequest:
     UserId: str
     AccountId: str
     BotId: str
-    Market: str
+    CloudMarket: str
     Type: str
     Direction: str
     OrderPrice: float

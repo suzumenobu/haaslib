@@ -1,0 +1,88 @@
+* Contributing to HaasLib
+** Getting Started
+*** Prerequisites
+- Python 3.11+
+- Git
+- Virtual environment tool
+
+*** Development Setup
+#+begin_src bash
+# Fork and clone the repository
+git clone https://github.com/yourusername/haaslib.git
+cd haaslib
+
+# Create and activate virtual environment
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+
+# Install development dependencies
+pip install -r requirements-dev.txt
+#+end_src
+
+** Development Workflow
+*** Branch Naming
+- feature/: New features
+- fix/: Bug fixes
+- docs/: Documentation updates
+- refactor/: Code refactoring
+
+*** Commit Messages
+#+begin_example
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer]
+#+end_example
+
+Types:
+- feat: New feature
+- fix: Bug fix
+- docs: Documentation
+- style: Formatting
+- refactor: Code restructuring
+- test: Adding tests
+- chore: Maintenance
+
+** Code Style
+*** Python Guidelines
+- Follow PEP 8
+- Use type hints
+- Document classes and methods
+- Maximum line length: 88 characters
+
+*** Documentation
+- Update README.org when adding features
+- Include docstrings for public APIs
+- Add type hints for function arguments
+
+** Testing
+*** Running Tests
+#+begin_src bash
+# Run all tests
+python -m unittest discover
+
+# Run specific test file
+python -m unittest haaslib.test.test_models
+#+end_src
+
+*** Writing Tests
+- Place tests in haaslib/test/
+- Follow test_*.py naming convention
+- Include both positive and negative cases
+- Mock external dependencies
+
+** Pull Request Process
+1. Create feature branch
+2. Write tests
+3. Implement changes
+4. Update documentation
+5. Submit PR with description
+
+** Code Review
+*** Review Checklist
+- [ ] Tests pass
+- [ ] Documentation updated
+- [ ] Code follows style guide
+- [ ] No unnecessary dependencies
+- [ ] Performance considered

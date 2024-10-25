@@ -9,7 +9,7 @@ class HaasBot:
     ScriptId: str
     ScriptVersion: str
     AccountId: str
-    Market: str
+    CloudMarket: str
     ExecutionId: str
     IsActivated: bool
     IsPaused: bool

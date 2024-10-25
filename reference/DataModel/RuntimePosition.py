@@ -6,7 +6,7 @@ class RuntimePosition:
     PositionGuid: str
     PositionId: str
     AccountId: str
-    Market: str
+    CloudMarket: str
     Leverage: float
     Direction: str
     MarketType: str

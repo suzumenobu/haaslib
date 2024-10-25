@@ -13,7 +13,7 @@ class EnumHaasInputFieldType(Enum):
   PriceSourceMarket = 5
   Account = 6
   AccountMarket = 7
-  Market = 8
+  CloudMarket = 8
   Interval = 9
   Header = 10
   Table = 11

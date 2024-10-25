@@ -1,15 +1,25 @@
-from typing import List, Dict, Optional
+from typing import List, Optional, Dict
 from datetime import datetime
 from ..executor import RequestsExecutor, Authenticated
 from ..models.market import (
     Market,
+    CloudMarket,
     MarketListResponse,
     PriceSource,
     OrderBook,
     Trade,
-    Tick,
-    # PriceSnapshot,
-    # FiatConversion
+    Tick
+)
+from ..models.price_source import (
+    PriceSourceDetail,
+    PriceSourceDetailResponse
+)
+from ..models.market_data import (
+    MarketPrice,
+    MarketPriceResponse,
+    CloudLastTrade,
+    CloudTradeContract,
+    # PriceSnapshot  # Add this if it exists
 )
 from ..models.base import ApiResponse
 from ..exceptions import HaasApiError
@@ -37,18 +47,18 @@ def get_all_pricesources_simple(executor: RequestsExecutor) -> List[str]:
         raise HaasApiError(response.Error or "Failed to get price sources")
     return response.Data or []
 
-def get_pricesources_detailed(executor: RequestsExecutor) -> List[PriceSource]:
-    """Returns a detailed list of all supported pricesources"""
+def get_pricesources_detailed(executor: RequestsExecutor) -> List[PriceSourceDetail]:
+    """Returns detailed information about all supported price sources"""
     response = executor.execute(
         endpoint="Price",
-        response_type=ApiResponse[List[PriceSource]],
-        query_params={"channel": "PRICESOURCES"}
+        response_type=PriceSourceDetailResponse,
+        query_params={"channel": "ALL_PRICESOURCES"}
     )
     if not response.Success:
         raise HaasApiError(response.Error or "Failed to get detailed price sources")
     return response.Data or []
 
-def get_all_markets(executor: RequestsExecutor) -> List[Market]:
+def get_all_markets(executor: RequestsExecutor) -> List[CloudMarket]:
     """Returns a list of all supported markets"""
     executor.set_debug(False)  # Disable debug by default for this noisy endpoint
     
@@ -61,20 +71,20 @@ def get_all_markets(executor: RequestsExecutor) -> List[Market]:
         raise HaasApiError(response.Error or "Failed to get markets")
     return response.Data or []
 
-def get_all_markets_by_source(executor: RequestsExecutor, price_source: str) -> Dict[str, List[Market]]:
+def get_all_markets_by_source(executor: RequestsExecutor, price_source: str) -> Dict[str, List[CloudMarket]]:
     """Returns a dictionary of supported price sources and their markets"""
     executor.set_debug(False)  # Disable debug by default for this noisy endpoint
     
     response = executor.execute(
         endpoint="Price",
-        response_type=ApiResponse[Dict[str, List[Market]]],
+        response_type=ApiResponse[Dict[str, List[CloudMarket]]],
         query_params={"channel": "ALL_MARKETS"}
     )
     if not response.Success:
         raise HaasApiError(response.Error or "Failed to get markets by source")
     return response.Data or {}
 
-def get_unique_markets(executor: RequestsExecutor) -> List[Market]:
+def get_unique_markets(executor: RequestsExecutor) -> List[CloudMarket]:
     """Returns a list of all unique markets"""
     response = executor.execute(
         endpoint="Price",
@@ -85,7 +95,7 @@ def get_unique_markets(executor: RequestsExecutor) -> List[Market]:
         raise HaasApiError(response.Error or "Failed to get unique markets")
     return response.Data or []
 
-def get_markets_by_source(executor: RequestsExecutor, price_source: str) -> List[Market]:
+def get_markets_by_source(executor: RequestsExecutor, price_source: str) -> List[CloudMarket]:
     """Returns markets for a specific price source"""
     response = executor.execute(
         endpoint="Price",
@@ -99,7 +109,7 @@ def get_markets_by_source(executor: RequestsExecutor, price_source: str) -> List
         raise HaasApiError(response.Error or f"Failed to get markets for {price_source}")
     return response.Data or []
 
-def get_trade_markets(executor: RequestsExecutor, price_source: str) -> List[Market]:
+def get_trade_markets(executor: RequestsExecutor, price_source: str) -> List[CloudMarket]:
     """Returns trade markets for a specific price source"""
     response = executor.execute(
         endpoint="Price",
@@ -124,19 +134,32 @@ def get_coin_list(executor: RequestsExecutor) -> List[str]:
         raise HaasApiError(response.Error or "Failed to get coin list")
     return response.Data or []
 
-def get_price(executor: RequestsExecutor, market: str) -> float:
-    """Returns the last price for a market"""
+def get_price(executor: RequestsExecutor, market_tag: str) -> MarketPrice:
+    """
+    Get current price information for a market
+    
+    Args:
+        executor: The RequestsExecutor instance
+        market_tag: Market identifier (e.g., 'BINANCE_BTC_USDT_')
+        
+    Returns:
+        MarketPrice object containing current price data
+        
+    Raises:
+        HaasApiError: If the API request fails
+    """
     response = executor.execute(
         endpoint="Price",
-        response_type=ApiResponse[float],
+        response_type=MarketPriceResponse,
         query_params={
-            "channel": "PRICE",
-            "market": market
+            "channel": f"PRICE_{market_tag}"
         }
     )
+    
     if not response.Success:
-        raise HaasApiError(response.Error or f"Failed to get price for {market}")
-    return response.Data or 0.0
+        raise HaasApiError(response.Error or f"Failed to get price for {market_tag}")
+    
+    return response.Data
 
 def get_orderbook(executor: RequestsExecutor, market: str) -> OrderBook:
     """Returns the orderbook for a market"""
@@ -245,3 +268,35 @@ def get_used_margin(executor: RequestsExecutor[Authenticated]) -> float:
     if not response.Success:
         raise HaasApiError(response.Error or "Failed to get used margin")
     return response.Data or 0.0
+
+def get_custom_snapshot_minute_tick(executor: RequestsExecutor, markets: List[str]) -> List:
+    """
+    Fetches a custom snapshot of minute ticks for specified markets.
+    
+    Args:
+        executor: The RequestsExecutor instance
+        markets: List of market strings (e.g., ['BINANCEQUARTERLY_SOL_USD_QUARTERLY', ...])
+        
+    Returns:
+        List of snapshot data for the specified markets
+        
+    Raises:
+        HaasApiError: If the API request fails
+    """
+    # Join the markets into a single string separated by commas
+    markets_string = ','.join(markets)
+    
+    # Execute the request
+    response = executor.execute(
+        endpoint="Price",
+        response_type=ApiResponse[List],
+        query_params={
+            "channel": "CUSTOM_SNAPSHOT_MINUTE_TICK",
+            "marketsString": markets_string
+        }
+    )
+    
+    if not response.Success:
+        raise HaasApiError(response.Error or "Failed to get custom snapshot minute tick")
+    
+    return response.Data or []

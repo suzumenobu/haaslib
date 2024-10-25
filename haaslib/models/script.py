@@ -51,7 +51,7 @@ class HaasScriptSettings(BaseModel):
     BotId: str
     BotName: str
     AccountId: str
-    Market: str
+    CloudMarket: str
     PositionMode: str
     MarginMode: str
     Leverage: float

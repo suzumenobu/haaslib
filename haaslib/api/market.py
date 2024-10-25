@@ -1,11 +1,11 @@
 from typing import List
 from ..executor import RequestsExecutor, Authenticated
-from ..models.market import Market, MarketListResponse
+from ..models.market import CloudMarket, MarketListResponse
 from ..exceptions import HaasApiError as HaasApiError
 from ..exceptions import MarketError as MarketError
 
 
-def get_all_markets(executor: RequestsExecutor) -> List[Market]:
+def get_all_markets(executor: RequestsExecutor) -> List[CloudMarket]:
     """Get all available markets"""
     response = executor.execute(
         endpoint="Price",
@@ -24,7 +24,7 @@ def get_all_markets(executor: RequestsExecutor) -> List[Market]:
 def get_all_markets_by_pricesource(
     executor: RequestsExecutor,
     price_source: str
-) -> List[Market]:
+) -> List[CloudMarket]:
     """Get markets filtered by price source"""
     markets = get_all_markets(executor)
     return [

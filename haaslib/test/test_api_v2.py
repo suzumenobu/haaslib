@@ -4,7 +4,7 @@ from ..executor import RequestsExecutor, Guest, Authenticated
 from ..exceptions import HaasApiError
 from ..models import (
     CloudMarket,
-    MarketList,
+    MarketListResponse,
     UserLabDetails,
     CreateLabRequest
 )

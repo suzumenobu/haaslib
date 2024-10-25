@@ -9,7 +9,7 @@ class UserTrade(BaseModel):
     order_id: str = Field(alias="OrderId")
     unix: int = Field(alias="Unix")
     type: str = Field(alias="Type")
-    market: str = Field(alias="Market")
+    market: str = Field(alias="CloudMarket")
     direction: str = Field(alias="Direction")
     trade_price: float = Field(alias="TradePrice")
     trade_amount: float = Field(alias="TradeAmount")

@@ -4,7 +4,7 @@ from typing import Any
 @dataclasses.dataclass
 class RuntimeReport:
     AccountId: str
-    Market: str
+    CloudMarket: str
     AmountLabel: str
     MarginLabel: str
     ProfitLabel: str

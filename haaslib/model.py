@@ -57,8 +57,8 @@ class AccountBalance(BaseModel):
 class AccountList(BaseModel):
     root: List[AccountData]
 
-# Market Models
-from .models.market import CloudMarket, MarketList
+# CloudMarket Models
+from .models.market import CloudMarket, MarketListResponse
 
 # Lab Models
 class LabConfig(BaseModel):
@@ -190,7 +190,7 @@ __all__ = [
     'AccountBalance',
     'AccountList',
     'CloudMarket',
-    'MarketList',
+    'MarketListResponse',
     'LabConfig',
     'LabSettings',
     'CreateLabRequest',

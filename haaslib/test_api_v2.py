@@ -5,16 +5,22 @@ import logging
 import time
 from datetime import datetime
 from pathlib import Path
-from dotenv import load_dotenv
 import random
 import traceback  # Add this import at the top
+from dotenv import load_dotenv
+
 
 from haaslib.executor import RequestsExecutor, Guest, Authenticated
 from haaslib.exceptions import HaasApiError, AuthenticationError
-from haaslib.models.market import Market
+from haaslib.models.market import CloudMarket, MarketListResponse  # Add MarketListResponse here
 from haaslib.models.auth import AuthResponse
 from haaslib.models.base import ApiResponse
-from haaslib.models.market import MarketListResponse
+from haaslib.models.market_data import (
+    MarketPrice,
+    MarketPriceResponse,
+    MarketPriceInformation,
+    MarketPriceSummary
+)
 
 
 class TestRequestsExecutor(unittest.TestCase):
@@ -121,7 +127,7 @@ class TestRequestsExecutor(unittest.TestCase):
             )
             
             # Log raw response
-            self.log_response(response, "Raw MarketList Response")
+            self.log_response(response, "Raw MarketListResponse Response")
             
             self.assertTrue(response.Success)
             self.assertIsNotNone(response.Data)
@@ -135,7 +141,7 @@ class TestRequestsExecutor(unittest.TestCase):
                 for i, market in enumerate(markets[:3]):
                     self.log_response(
                         market.__dict__,
-                        f"Market {i+1}: {market.__dict__} Details"
+                        f"CloudMarket {i+1}: {market.__dict__} Details"
                     )
                 
         except Exception as e:
@@ -150,23 +156,15 @@ class TestRequestsExecutor(unittest.TestCase):
     def test_02_authentication_flow(self):
         """Test the two-step authentication process"""
         try:
-            self.logger.info("Testing authentication flow...")
-            
             # Step 1: Initial login
-            interface_secret = "".join(str(random.randint(0, 100)) for _ in range(10))
-            
             login_params = {
-                "channel": "LOGIN_WITH_CREDENTIALS",
-                "email": os.getenv('HAAS_API_EMAIL'),
-                "password": "***REDACTED***",  # Don't log actual password
-                "interfaceKey": interface_secret
+                "email": self.email,
+                "password": self.password,
+                "interfaceSecret": self.interface_secret
             }
-            self.logger.debug(
-                "Making initial login request",
-                extra={'data': json.dumps(login_params, indent=2)}
-            )
             
-            resp = self.guest_executor.execute(
+            resp = self.executor.execute_request(
+                method="POST",
                 endpoint="User",
                 response_type=AuthResponse,
                 query_params=login_params
@@ -174,32 +172,41 @@ class TestRequestsExecutor(unittest.TestCase):
             self.log_response(resp, "Initial Login Response")
             
             self.assertTrue(resp.Success)
+            self.assertIsNotNone(resp.Data)
             self.logger.info("Step 1: Initial login successful")
+
+            # Step 2: One-time code verification
+            # Add debug logging to see what's happening
+            self.logger.debug(f"Response Data: {resp.Data}")
             
-            # Step 2: One-time code
-            pincode = random.randint(100_000, 200_000)
+            # Make sure we have the necessary data from the first response
+            self.assertIsNotNone(resp.Data.get('OneTimeCode'), "One-time code is missing from response")
+            
             otp_params = {
-                "channel": "LOGIN_WITH_ONE_TIME_CODE",
-                "email": os.getenv('HAAS_API_EMAIL'),
-                "pincode": pincode,
-                "interfaceKey": interface_secret
+                "email": self.email,
+                "password": self.password,
+                "interfaceSecret": self.interface_secret,
+                "oneTimeCode": resp.Data.get('OneTimeCode')
             }
-            self.logger.debug(
-                "Making one-time code request",
-                extra={'data': json.dumps(otp_params, indent=2)}
-            )
             
-            resp = self.guest_executor.execute(
+            self.logger.debug(f"OTP Parameters: {otp_params}")
+            
+            resp = self.executor.execute_request(
+                method="POST",
                 endpoint="User",
                 response_type=AuthResponse,
                 query_params=otp_params
             )
             self.log_response(resp, "One-time Code Response")
             
+            # Add debug logging for the response
+            if not resp.Success:
+                self.logger.error(f"Authentication failed. Error: {resp.Error}")
+                
             self.assertTrue(resp.Success)
             self.assertIsNotNone(resp.Data)
             self.logger.info("Step 2: One-time code authentication successful")
-            
+                
         except Exception as e:
             tb = traceback.format_exc()
             self.logger.error(
@@ -207,6 +214,77 @@ class TestRequestsExecutor(unittest.TestCase):
                 extra={'data': f"Exception details:\n{str(e)}\n\nTraceback:\n{tb}"}
             )
             self.fail(f"Authentication flow test failed: {str(e)}")
+
+    def test_03_market_details(self):
+        """Test getting detailed market information"""
+        try:
+            # First get market list to pick a market
+            markets_response = self.executor.execute(
+                endpoint="Price",
+                response_type=MarketListResponse,
+                query_params={
+                    "channel": "MARKETLIST",
+                    "priceSource": test_market.price_source,
+                    "baseCurrency": test_market.base_currency,
+                    "quoteCurrency": test_market.quote_currency
+                }
+            )
+            
+            self.log_response(response, "CloudMarket Details Response")
+            self.assertTrue(response.Success)
+            self.assertIsNotNone(response.Data)
+            
+        except Exception as e:
+            tb = traceback.format_exc()
+            self.logger.error(f"Failed to get market details: {str(e)}", 
+                             extra={'data': f"Traceback:\n{tb}"})
+            self.fail(f"CloudMarket details test failed: {str(e)}")
+
+    def test_04_market_price(self):
+        """Test getting current market price"""
+        try:
+            # Get market list first
+            markets_response = self.executor.execute(
+                endpoint="Price",
+                response_type=MarketListResponse,
+                query_params={"channel": "MARKETLIST"}
+            )
+            
+            # Filter for active markets on major exchanges
+            major_exchanges = ['BINANCE']
+            active_markets = [m for m in markets_response.Data 
+                            if m.price_source in major_exchanges 
+                            and m.enabled 
+                            and m.quote_currency in ['USDT', 'BUSD']]
+            
+            if not active_markets:
+                self.fail("No suitable test markets found")
+                
+            test_market = random.choice(active_markets)
+            
+            # Format the channel string following DEEPTICKS_EXCHANGE_PRIMARY_SECONDARY_ pattern
+            channel_tag = f"PRICE_{test_market.price_source}_{test_market.base_currency}_{test_market.quote_currency}_"
+            self.logger.info(f"Testing price with channel: {channel_tag}")
+            
+            # Get price information using the formatted channel string
+            response = self.executor.execute(
+                endpoint="Price",
+                response_type=MarketPriceResponse,
+                query_params={"channel": channel_tag}
+            )
+            
+            self.log_response(response, "CloudMarket Price Response")
+            self.assertTrue(response.Success, f"API request failed: {response.Error}")
+            self.assertIsNotNone(response.Data)
+            self.assertIsNotNone(response.Data.last_price)
+            
+        except Exception as e:
+            tb = traceback.format_exc()
+            self.logger.error(
+                f"Failed to get market price: {str(e)}", 
+                extra={'data': f"Traceback:\n{tb}"}
+            )
+            self.fail(f"CloudMarket price test failed: {str(e)}")
 
 if __name__ == '__main__':
     unittest.main()

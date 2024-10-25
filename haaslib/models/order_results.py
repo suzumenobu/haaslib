@@ -28,7 +28,7 @@ class UserOrder(BaseModel):
     unix: int = Field(alias="Unix")
     order_id: str = Field(alias="OrderId")
     stop_order_id: str = Field(alias="StopOrderId")
-    market: str = Field(alias="Market")
+    market: str = Field(alias="CloudMarket")
     direction: str = Field(alias="Direction")
     type: str = Field(alias="Type")
     order_price: float = Field(alias="OrderPrice")

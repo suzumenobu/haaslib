@@ -1,3 +1,3 @@
-from .models.market import Market, MarketListResponse
+from .models.market import CloudMarket, MarketListResponse
 
-__all__ = ['Market', 'MarketListResponse']
+__all__ = ['CloudMarket', 'MarketListResponse']

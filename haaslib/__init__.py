@@ -20,13 +20,16 @@ logger.info(f"Python path: {sys.path}")
 
 # Export models
 from .models.market import (
-    Market,
+    CloudMarket,
     MarketListResponse,
     PriceSource,
     OrderBook,
     Trade,
-    Tick,
-
+    Tick
+)
+from .models.market_data import (
+    MarketPrice,
+    MarketPriceResponse
 )
 from .models.auth import AuthResponse
 from .models.trading import (
@@ -62,7 +65,7 @@ from .api.trading import (
 )
 
 __all__ = [
-    'Market',
+    'CloudMarket',
     'MarketListResponse',
     'PriceSource',
     'OrderBook',

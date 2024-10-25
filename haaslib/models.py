@@ -1,8 +1,8 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
-class Market(BaseModel):
-    """Market model matching the API's CloudMarket structure"""
+class CloudMarket(BaseModel):
+    """CloudMarket model matching the API's CloudMarket structure"""
     price_source: str = Field(alias='PS')
     base_currency: str = Field(alias='P')
     quote_currency: str = Field(alias='S')

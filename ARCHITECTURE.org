@@ -1,0 +1,74 @@
+* HaasLib Architecture
+** Overview
+HaasLib is designed with a modular architecture focusing on maintainability and extensibility.
+
+** Core Components
+*** API Layer
+**** HaasApi
+- Main interface for client applications
+- Manages authentication state
+- Coordinates between executors and models
+
+**** Executors
+- =RequestsExecutor=: HTTP client implementation
+- Handles retries and rate limiting
+- Supports both authenticated and guest operations
+
+*** Data Models
+**** Base Models
+- =ApiResponse=: Base response wrapper
+- =ModelApiResponse=: Generic typed response
+
+**** CloudMarket Models
+- =CloudMarket=: Basic market information
+- =MarketListResponse=: CloudMarket list container
+- =Trade=: Trade execution details
+- =Tick=: CloudMarket tick data
+
+**** Extended Models
+- =CloudLastTrade=: Recent trade information
+- =CloudTradeContract=: Contract specifications
+- =MarketInformation=: Detailed market data
+
+** Data Flow
+*** Request Flow
+1. Client calls HaasApi method
+2. HaasApi validates parameters
+3. RequestsExecutor sends HTTP request
+4. Response parsed into appropriate model
+5. Validated model returned to client
+
+*** Authentication Flow
+1. Client provides credentials
+2. API generates interface secret
+3. One-time code verification
+4. Session token stored for future requests
+
+** Error Handling
+*** Exception Hierarchy
+- =HaasApiError=: Base exception
+- =AuthenticationError=: Auth-related failures
+- =ValidationError=: Data validation issues
+
+** Testing Strategy
+*** Unit Tests
+- Model validation
+- Request formatting
+- Response parsing
+
+*** Integration Tests
+- API endpoint connectivity
+- Authentication flow
+- CloudMarket data retrieval
+
+** Future Improvements
+*** Planned Features
+- WebSocket support
+- Async client implementation
+- Enhanced error handling
+- Comprehensive logging
+
+*** Performance Optimizations
+- Connection pooling
+- Response caching
+- Batch operations

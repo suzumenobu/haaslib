@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 class RuntimeReport(BaseModel):
     """Base runtime report containing account and market information"""
     AccountId: str
-    Market: str
+    CloudMarket: str
     AmountLabel: str
     MarginLabel: str
     ProfitLabel: str
@@ -95,7 +95,7 @@ class RuntimePosition(BaseModel):
     PositionGuid: str
     PositionId: str
     AccountId: str
-    Market: str
+    CloudMarket: str
     Leverage: float
     Direction: str
     MarketType: str

@@ -5,7 +5,7 @@ from typing import Any, List
 class UserPosition:
     PositionId: str
     Direction: str
-    Market: str
+    CloudMarket: str
     Leverage: float
     MarginMode: str
     Price: float

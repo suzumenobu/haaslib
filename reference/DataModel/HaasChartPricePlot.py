@@ -3,7 +3,7 @@ from typing import Any, List
 
 @dataclasses.dataclass
 class HaasChartPricePlot:
-    Market: str
+    CloudMarket: str
     Interval: str
     Candles: List[Any]
     Colors: Any

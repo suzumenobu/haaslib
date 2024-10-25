@@ -23,7 +23,7 @@ class UserPosition(BaseModel):
     """User position information"""
     position_id: str = Field(alias="PositionId")
     direction: str = Field(alias="Direction")
-    market: str = Field(alias="Market")
+    market: str = Field(alias="CloudMarket")
     leverage: float = Field(alias="Leverage")
     margin_mode: str = Field(alias="MarginMode")
     price: float = Field(alias="Price")

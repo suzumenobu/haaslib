@@ -1,6 +1,8 @@
-from typing import List, Optional, Dict
+from typing import List, Optional
 from enum import Enum
 from pydantic import BaseModel, Field
+from .base import ApiResponse
+from datetime import datetime
 
 class PriceSource(str, Enum):
     """Supported price sources"""
@@ -30,31 +32,45 @@ class OrderBook(BaseModel):
     class Config:
         populate_by_name = True
 
+class MarketPriceSummary(BaseModel):
+    """CloudMarket price summary statistics"""
+    change: float = Field(..., alias="Change")
+    open: float = Field(..., alias="Open")
+    high: float = Field(..., alias="High")
+    low: float = Field(..., alias="Low")
+    close: float = Field(..., alias="Close")
+    volume: float = Field(..., alias="Volume")
+
+    class Config:
+        populate_by_name = True
+
 class Market(BaseModel):
-    """Market data model with field aliases for shortened API response"""
-    price_source: str = Field(alias='PS')
-    base_currency: str = Field(alias='P')
-    quote_currency: str = Field(alias='S')
-    contract_name: Optional[str] = Field(alias='C', default='')
-    enabled: bool = Field(default=True)
-    
-    class Config:
-        populate_by_name = True
-        allow_population_by_field_name = True
+    """Basic market information"""
+    price_source: str
+    base_currency: str
+    quote_currency: str
+    enabled: bool = True
 
-    @property
-    def market_name(self) -> str:
-        """Generate market name in format: PRICESOURCE_BASE_QUOTE"""
-        return f"{self.price_source}_{self.base_currency}_{self.quote_currency}"
+class CloudMarket(Market):
+    """Extended market information from cloud API"""
+    market_id: str
+    market_name: str
+    market_type: str
+    price_precision: int
+    volume_precision: int
+    min_volume: float
+    max_volume: float
+    min_price: float
+    max_price: float
+    maker_fee: float
+    taker_fee: float
+    is_spot: bool = True
+    is_margin: bool = False
+    is_futures: bool = False
 
-class MarketListResponse(BaseModel):
-    """Wrapper for list of markets response"""
-    Success: bool
-    Error: Optional[str] = None
-    Data: Optional[List[Market]] = None
-
-    class Config:
-        populate_by_name = True
+class MarketListResponse(ApiResponse):
+    """Response wrapper for market list"""
+    Data: Optional[List[CloudMarket]] = None
 
 # Trade-specific models
 class LastTrade(BaseModel):
@@ -89,7 +105,7 @@ class Trade(BaseModel):
     order_id: str = Field(alias="OrderId")
     timestamp: int = Field(alias="Timestamp")
     type: str = Field(alias="Type")
-    market: str = Field(alias="Market")
+    market: str = Field(alias="CloudMarket")
     direction: str = Field(alias="Direction")
     trade_price: float = Field(alias="TradePrice")
     trade_amount: float = Field(alias="TradeAmount")
@@ -102,7 +118,7 @@ class Trade(BaseModel):
         populate_by_name = True
 
 class Tick(BaseModel):
-    """Market tick data"""
+    """CloudMarket tick data"""
     timestamp: int = Field(alias="Timestamp")
     open: float = Field(alias="Open")
     high: float = Field(alias="High")
@@ -114,3 +130,19 @@ class Tick(BaseModel):
 
     class Config:
         populate_by_name = True
+
+class PriceSourceDetail(BaseModel):
+    """Detailed price source information"""
+    full_name: str = Field(..., alias="F")
+    friendly_name: str = Field(..., alias="FN")
+    description: Optional[str] = Field(None, alias="D")
+    enabled: bool = Field(..., alias="E")
+    login_required: bool = Field(False, alias="LR")
+    is_beta: bool = Field(False, alias="IBD")
+
+    class Config:
+        populate_by_name = True
+
+class PriceSourceDetailResponse(ApiResponse):
+    """Response wrapper for price source details"""
+    Data: Optional[List[PriceSourceDetail]] = None

@@ -5,7 +5,7 @@ class UserOrder:
     Unix: int
     OrderId: str
     StopOrderId: str
-    Market: str
+    CloudMarket: str
     Direction: str
     Type: str
     OrderPrice: float

@@ -8,7 +8,7 @@ class UserTrade:
     OrderId: str
     Unix: int
     Type: str
-    Market: str
+    CloudMarket: str
     Direction: str
     TradePrice: float
     TradeAmount: float

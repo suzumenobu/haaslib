@@ -5,7 +5,7 @@ from .base import BaseModel
 class Order(BaseModel):
     account_id: str = Field(alias="AccountId")
     order_id: Optional[str] = Field(alias="OrderId", default=None)
-    market: str = Field(alias="Market")
+    market: str = Field(alias="CloudMarket")
     price: float = Field(alias="Price")
     amount: float = Field(alias="Amount")
     type: str = Field(alias="Type")  # "BUY" or "SELL"
@@ -18,7 +18,7 @@ class Order(BaseModel):
 class Position(BaseModel):
     account_id: str = Field(alias="AccountId")
     position_id: str = Field(alias="PositionId")
-    market: str = Field(alias="Market")
+    market: str = Field(alias="CloudMarket")
     entry_price: float = Field(alias="EntryPrice")
     current_price: float = Field(alias="CurrentPrice")
     amount: float = Field(alias="Amount")
@@ -32,7 +32,7 @@ class Position(BaseModel):
 class MarginSettings(BaseModel):
     driver_name: str = Field(alias="DriverName")
     driver_type: str = Field(alias="DriverType")
-    market: str = Field(alias="Market")
+    market: str = Field(alias="CloudMarket")
     leverage: float = Field(alias="Leverage")
     price: float = Field(alias="Price")
     amount: float = Field(alias="Amount")
@@ -42,7 +42,7 @@ class MarginSettings(BaseModel):
 
 class MaxAmountRequest(BaseModel):
     account_id: str = Field(alias="AccountId")
-    market: str = Field(alias="Market")
+    market: str = Field(alias="CloudMarket")
     price: float = Field(alias="Price")
     used_amount: float = Field(alias="UsedAmount")
     amount_percentage: float = Field(alias="AmountPercentage")
@@ -61,7 +61,7 @@ class MaxAmountResponse(BaseModel):
 
 class CancelOrdersRequest(BaseModel):
     account_id: Optional[str] = Field(alias="AccountId", default=None)
-    market: Optional[str] = Field(alias="Market", default=None)
+    market: Optional[str] = Field(alias="CloudMarket", default=None)
     
     class Config:
         populate_by_name = True
@@ -69,7 +69,7 @@ class CancelOrdersRequest(BaseModel):
 class Trade(BaseModel):
     account_id: str = Field(alias="AccountId")
     trade_id: str = Field(alias="TradeId")
-    market: str = Field(alias="Market")
+    market: str = Field(alias="CloudMarket")
     price: float = Field(alias="Price")
     amount: float = Field(alias="Amount")
     type: str = Field(alias="Type")  # "BUY" or "SELL"
