@@ -16,200 +16,200 @@ from typing import (
 from functools import wraps
 
 import requests
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
+import logging
+import json
+import os
+import random
 
-from .models import ApiResponse, ModelApiResponse
+from .models.base import ApiResponse, ModelApiResponse
+from .exceptions import HaasApiError, AuthenticationError
 from . import logger
+from .rate_limiter import RateLimiter  # Add this import
+from .models.auth import AuthResponse  # Add this import
+from .models.auth import AppLoginDetails  # Add this import
+from .models.market import MarketListResponse
 
-State = TypeVar("State", bound=Union["Guest", "Authenticated"])
-ApiResponseData = TypeVar(
-    "ApiResponseData",
-    bound=Union[BaseModel, List[BaseModel], bool, str, Dict[str, Any]]
-)
+@dataclasses.dataclass
+class Guest:
+    """Represents an unauthenticated state"""
+    pass
 
+@dataclasses.dataclass
+class Authenticated:
+    """Represents an authenticated state"""
+    user_id: str  # Added user_id
+    interface_secret: str  # Changed from token to interface_secret
+
+# Define TypeVar after the classes are defined
+State = TypeVar("State", Guest, Authenticated)
 HaasApiEndpoint = Literal["Labs", "Account", "HaasScript", "Price", "User", "Bot"]
 
-class HaasApiError(Exception):
-    """Base exception for API errors"""
-    pass
-
-@dataclasses.dataclass
-class UserState:
-    """Base class for user states"""
-    pass
-
-class Guest(UserState):
-    """Guest user state"""
-    pass
-
-@dataclasses.dataclass
-class Authenticated(UserState):
-    """Authenticated user state"""
-    user_id: str
-    interface_key: str
-
-def rate_limit(calls: int, period: float):
-    """Rate limiting decorator"""
-    def decorator(func):
-        last_reset = time.time()
-        calls_made = 0
-        
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            nonlocal last_reset, calls_made
-            
-            current_time = time.time()
-            if current_time - last_reset > period:
-                calls_made = 0
-                last_reset = current_time
-                
-            if calls_made >= calls:
-                sleep_time = period - (current_time - last_reset)
-                if sleep_time > 0:
-                    logger.debug(f"Rate limit reached. Sleeping for {sleep_time:.2f}s")
-                    time.sleep(sleep_time)
-                calls_made = 0
-                last_reset = time.time()
-                
-            calls_made += 1
-            return func(*args, **kwargs)
-        return wrapper
-    return decorator
-
 class RequestsExecutor(Generic[State]):
-    """API executor with rate limiting and retries"""
+    """Executes API requests with retry logic and state management"""
     
     def __init__(
         self,
-        host: str,
-        port: int,
-        state: State,
-        protocol: str = "http",  # Default to http
-        max_retries: int = 3,
-        retry_delay: float = 1.0,
-        rate_limit_calls: int = 60,
-        rate_limit_period: float = 60.0,
-    ):
-        """Initialize the executor"""
-        self.host = host
-        self.port = port
-        self.state = state
-        self.protocol = "http"  # Force HTTP
-        self.max_retries = max_retries
-        self.retry_delay = retry_delay
-        self.rate_limit_calls = rate_limit_calls
-        self.rate_limit_period = rate_limit_period
+        base_url: Optional[str] = None,
+        email: Optional[str] = None,
+        password: Optional[str] = None,
+        port: Optional[str] = None,
+        state: Optional[State] = None  # Added state parameter
+    ) -> None:
+        """Initialize the executor with credentials"""
+        self.base_url = base_url or os.getenv('HAAS_API_HOST')  # Changed from HAAS_API_URL
+        self.email = email or os.getenv('HAAS_API_EMAIL')       # Changed from HAAS_TEST_EMAIL
+        self.password = password or os.getenv('HAAS_API_PASSWORD')  # Changed from HAAS_TEST_PASSWORD
+        self.port = port or os.getenv('HAAS_API_PORT', '8090')     # Changed default port
+        self.state = state or Guest()  # Initialize state
         
-        # Initialize session
-        self._session = requests.Session()
-        adapter = requests.adapters.HTTPAdapter(max_retries=max_retries)
-        self._session.mount('http://', adapter)
+        if not all([self.base_url, self.email, self.password]):
+            raise ValueError("Missing required credentials")
+            
+        self.logger = logging.getLogger('haaslib')
+        self.session = requests.Session()
+        
+        self.logger.debug(f"Initialized with base URL: {self.base_url}:{self.port}")
+        
+        self.max_retries = 3
+        
+        # Add rate limiter
+        self.rate_limiter = RateLimiter()
+        self.rate_limiter.requests_per_second = 0.5
 
-    @property
-    def session(self) -> requests.Session:
-        """Get the requests session"""
-        if not hasattr(self, '_session') or self._session is None:
-            self._session = requests.Session()
-            adapter = requests.adapters.HTTPAdapter(max_retries=self.max_retries)
-            self._session.mount('http://', adapter)
-        return self._session
-
-    @rate_limit(calls=60, period=60.0)
+    def set_debug(self, enabled: bool) -> None:
+        """Enable or disable debug logging"""
+        self.debug = enabled
+        self.logger.debug(f"Debug mode {'enabled' if enabled else 'disabled'}")
+    
     def execute(
         self,
-        endpoint: HaasApiEndpoint,
-        response_type: Type[ApiResponseData],
-        query_params: Optional[dict] = None,
-    ) -> ApiResponse[ApiResponseData]:
-        """Execute API request with retries and rate limiting"""
-        retries = 0
-        last_error = None
+        endpoint: str,
+        response_type: Type[T],
+        query_params: Optional[Dict] = None
+    ) -> T:
+        """Execute API request with retries"""
+        max_attempts = 3
+        attempt = 1
         
-        while retries < self.max_retries:
+        while attempt <= max_attempts:
             try:
-                return self._execute_inner(endpoint, response_type, query_params)
-            except (requests.RequestException, HaasApiError) as e:
-                last_error = e
-                retries += 1
-                if retries < self.max_retries:
-                    sleep_time = self.retry_delay * (2 ** (retries - 1))
-                    logger.warning(
-                        f"Request failed: {e}. Retrying in {sleep_time:.2f}s "
-                        f"(attempt {retries}/{self.max_retries})"
-                    )
-                    time.sleep(sleep_time)
+                response = self._make_request(endpoint, query_params)
                 
-        raise HaasApiError(f"Request failed after {self.max_retries} retries: {last_error}")
+                # Debug log the raw response
+                self.logger.debug(f"Raw API Response: {response}...")  # First 1000 chars
+                
+                response_json = response
+                
+                # Debug log the parsed JSON
+                self.logger.debug(f"Parsed JSON: {json.dumps(response_json, indent=2)[:1000]}...")
+                
+                if response_type == MarketListResponse:
+                    # Ensure Data is a list
+                    if 'Data' in response_json and not isinstance(response_json['Data'], list):
+                        response_json['Data'] = [response_json['Data']]
+                    
+                    # Debug log the Data structure
+                    if response_json.get('Data'):
+                        self.logger.debug(f"First market in Data: {response_json['Data'][0]}")
+                
+                return response_type(**response_json)
+                
+            except ValidationError as e:
+                self.logger.error(f"Attempt {attempt} failed: {str(e)}")
+                if attempt == max_attempts:
+                    raise
+                attempt += 1
+                time.sleep(1)  # Wait before retry
 
-    def _execute_inner(
-        self,
-        endpoint: HaasApiEndpoint,
-        response_type: Type[ApiResponseData],
-        query_params: Optional[dict] = None,
-    ) -> ApiResponse[ApiResponseData]:
-        """Execute a single API request"""
-        url = f"{self.protocol}://{self.host}:{self.port}/{endpoint}API.php"
+    def authenticate(
+        self: RequestsExecutor[Guest]
+    ) -> RequestsExecutor[Authenticated]:
+        """Creates authenticated session in Haas API"""
+        try:
+            # 1. Generate interface key
+            interface_secret = "".join(f"{random.randint(0, 100)}" for _ in range(10))
+            self.logger.debug(f"Generated interface key: {interface_secret}")
+            
+            # 2. Initial login
+            login_resp = self._make_request(
+                endpoint="User",
+                query_params={
+                    "channel": "LOGIN_WITH_CREDENTIALS",
+                    "email": self.email,
+                    "password": self.password,
+                    "interfaceKey": interface_secret,
+                },
+            )
+            
+            if not login_resp.get('Success'):
+                raise AuthenticationError(f"Initial login failed: {login_resp.get('Error')}")
+
+            # 3. One-time code authentication
+            auth_resp = self._make_request(
+                endpoint="User",
+                query_params={
+                    "channel": "LOGIN_WITH_ONE_TIME_CODE",
+                    "email": self.email,
+                    "pincode": random.randint(100_000, 200_000),
+                    "interfaceKey": interface_secret,
+                },
+            )
+            
+            if not auth_resp.get('Success'):
+                raise AuthenticationError(f"One-time code auth failed: {auth_resp.get('Error')}")
+
+            # 4. Extract user data from nested structure
+            data = auth_resp.get('Data', {})
+            d_data = data.get('D', {})
+            
+            user_id = d_data.get('UserId')
+            interface_secret = d_data.get('InterfaceSecret')  # Changed from InterfaceKey to InterfaceSecret
+
+            if not user_id or not interface_secret:
+                self.logger.error(f"Missing required fields. Full response: {auth_resp}")
+                raise AuthenticationError("Missing required fields in response")
+
+            self.logger.info(f"Successfully authenticated user: {user_id}")
+            
+            # 5. Create new authenticated executor
+            return RequestsExecutor(
+                base_url=self.base_url,
+                port=self.port,
+                email=self.email,
+                password=self.password,
+                state=Authenticated(
+                    user_id=user_id,
+                    interface_secret=interface_secret
+                )
+            )
+            
+        except Exception as e:
+            self.logger.error(f"Authentication failed: {str(e)}")
+            raise AuthenticationError(f"Authentication failed: {str(e)}")
+
+    def _make_request(self, endpoint: str, query_params: Optional[dict] = None) -> dict:
+        """Make HTTP request to API endpoint"""
+        url = f"http://{self.base_url}:{self.port}/{endpoint}API.php"
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
+        
+        if isinstance(self.state, Authenticated):
+            headers["Authorization"] = f"Bearer {self.state.interface_secret}"
+            
+        self.logger.debug(f"Making request to: {url}")
+        self.logger.debug(f"Headers: {headers}")
+        self.logger.debug(f"Query params: {query_params}")
         
         try:
-            response = self.session.get(url, params=query_params or {})
+            response = requests.get(url, params=query_params, headers=headers)
             response.raise_for_status()
-            
-            data = response.json()
-            return ApiResponse(Success=True, Data=data.get('Data', {}))
-            
+            return response.json()
         except requests.exceptions.RequestException as e:
-            logger.warning(f"Request failed: {e}")
-            raise HaasApiError(f"Request failed: {e}") from e
-        except Exception as e:
-            logger.warning(f"Unexpected error: {e}")
-            raise HaasApiError(f"Unexpected error: {e}") from e
-
-    def authenticate(self, email: str, password: str) -> RequestsExecutor[Authenticated]:
-        """Authenticate and return new executor with authenticated state"""
-        response = self.execute(
-            endpoint="User",
-            response_type=dict,
-            query_params={
-                "channel": "AUTH",
-                "email": email,
-                "password": password
-            }
-        )
-        
-        if not response.Success:
-            raise HaasApiError(f"Authentication failed: {response.Error}")
-        
-        # Handle empty response
-        if not response.Data:
-            raise HaasApiError("Authentication failed: No data returned")
-        
-        # Extract user ID and interface key
-        user_id = response.Data.get('UserId')
-        interface_key = response.Data.get('InterfaceKey')
-        
-        if not user_id or not interface_key:
-            raise HaasApiError(
-                f"Authentication failed: Missing required fields. Got: {response.Data}"
-            )
-        
-        return RequestsExecutor[Authenticated](
-            host=self.host,
-            port=self.port,
-            state=Authenticated(
-                user_id=user_id,
-                interface_key=interface_key
-            ),
-            protocol=self.protocol,
-            max_retries=self.max_retries,
-            retry_delay=self.retry_delay
-        )
-
-    def __del__(self):
-        """Cleanup session on deletion"""
-        if hasattr(self, '_session'):
-            try:
-                self._session.close()
-            except Exception:
-                pass
+            self.logger.error(f"Request failed: {str(e)}")
+            raise
 
 __all__ = ['RequestsExecutor', 'Guest', 'Authenticated', 'HaasApiError']
