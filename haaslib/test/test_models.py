@@ -1,6 +1,6 @@
 import unittest
 # Update import to use consolidated version
-from ..models.market import CloudMarket, MarketList
+from ..models.market import CloudMarket, MarketList, Market, MarketListResponse
 from ..domain import MarketTag
 
 class TestModels(unittest.TestCase):
@@ -49,3 +49,14 @@ class TestModels(unittest.TestCase):
         request = CreateLabRequest(**request_data)
         self.assertEqual(request.script_id, "test_script")
         self.assertEqual(request.interval, 15)
+
+    def test_market(self):
+        """Test Market model"""
+        market_data = {
+            "PS": "BINANCE",
+            "P": "BTC",
+            "S": "USDT",
+            "C": ""
+        }
+        market = Market(**market_data)
+        self.assertEqual(market.market_name, "BINANCE_BTC_USDT")

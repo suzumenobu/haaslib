@@ -26,8 +26,7 @@ from .models.market import (
     OrderBook,
     Trade,
     Tick,
-    PriceSnapshot,
-    FiatConversion
+
 )
 from .models.auth import AuthResponse
 from .models.trading import (

@@ -29,13 +29,53 @@ class CloudTradeContract(BaseModel):
         populate_by_name = True
 
 class MarketInformation(BaseModel):
-    """Market information"""
-    price_source: str = Field(alias="PriceSource")
-    primary: str = Field(alias="Primary")
-    secondary: str = Field(alias="Secondary")
-    contract_name: str = Field(alias="ContractName")
-    short_name: str = Field(alias="ShortName")
-    wallet_tag: str = Field(alias="WalletTag")
+    """Market information with optional fields"""
+    price_source: Optional[str] = Field(None, alias="PriceSource")
+    primary: Optional[str] = Field(None, alias="Primary")
+    secondary: Optional[str] = Field(None, alias="Secondary")
+    contract_name: Optional[str] = Field(None, alias="ContractName")
+    short_name: Optional[str] = Field(None, alias="ShortName")
+    wallet_tag: Optional[str] = Field(None, alias="WalletTag")
+    
+    # Remove leading underscores from field names
+    price_source_alt: Optional[str] = Field(None, alias="PS")
+    primary_alt: Optional[str] = Field(None, alias="P")
+    secondary_alt: Optional[str] = Field(None, alias="S")
+    contract_name_alt: Optional[str] = Field(None, alias="C")
+
+    class Config:
+        populate_by_name = True
+        allow_population_by_field_name = True
+
+    def __init__(self, **data):
+        # Handle both full and shortened field names
+        if "PS" in data and "PriceSource" not in data:
+            data["PriceSource"] = data["PS"]
+        if "P" in data and "Primary" not in data:
+            data["Primary"] = data["P"]
+        if "S" in data and "Secondary" not in data:
+            data["Secondary"] = data["S"]
+        if "C" in data and "ContractName" not in data:
+            data["ContractName"] = data["C"]
+        super().__init__(**data)
+
+class Market(BaseModel):
+    """Market data model with field aliases for shortened API response"""
+    price_source: str = Field(alias='PS')
+    base_currency: str = Field(alias='P')
+    quote_currency: str = Field(alias='S')
+    contract_name: Optional[str] = Field(alias='C', default='')
+    enabled: bool = Field(default=True)
+    
+    class Config:
+        populate_by_name = True
+        allow_population_by_field_name = True
+
+class MarketListResponse(BaseModel):
+    """Wrapper for list of markets response"""
+    Success: bool
+    Error: Optional[str] = None
+    Data: Optional[List[Market]] = None
 
     class Config:
         populate_by_name = True

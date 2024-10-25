@@ -8,8 +8,8 @@ from ..models.market import (
     OrderBook,
     Trade,
     Tick,
-    PriceSnapshot,
-    FiatConversion
+    # PriceSnapshot,
+    # FiatConversion
 )
 from ..models.base import ApiResponse
 from ..exceptions import HaasApiError
@@ -209,7 +209,7 @@ def get_deep_ticks(executor: RequestsExecutor, market: str) -> List[Tick]:
         raise HaasApiError(response.Error or f"Failed to get deep ticks for {market}")
     return response.Data or []
 
-def get_price_snapshot(executor: RequestsExecutor, price_source: str) -> List[PriceSnapshot]:
+def get_price_snapshot(executor: RequestsExecutor, price_source: str) -> List:
     """Returns a snapshot of the very last prices"""
     response = executor.execute(
         endpoint="Price",

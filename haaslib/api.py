@@ -15,25 +15,21 @@ from .model import (
     HaasScriptItemWithDependencies,
     ApiResponse,
 )
+from .models.market import Market, MarketListResponse
 
 log = logging.getLogger(__name__)
 
-def get_all_markets(executor: RequestsExecutor) -> MarketList:
+def get_all_markets(executor: RequestsExecutor) -> List[Market]:
     """Get all available markets"""
     response = executor.execute(
-        endpoint="Market/GetMarkets",
-        response_type=MarketList
+        endpoint="Price",
+        response_type=MarketListResponse,
+        query_params={"channel": "MARKETLIST"}
     )
     
-    # Check if the response was successful
     if not response.Success:
-        raise HaasApiError(f"Failed to fetch markets: {response.Error}")
-    
-    # Validate the response data
-    if not isinstance(response.Data, MarketList):
-        raise HaasApiError(f"Unexpected response format: {response.Data}")
-    
-    return response.Data
+        raise HaasApiError(response.Error or "Failed to get markets")
+    return response.Data or []
 
 def get_all_markets_by_pricesource(executor: RequestsExecutor, price_source: str) -> List[CloudMarket]:
     """Get markets filtered by price source"""

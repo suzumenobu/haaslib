@@ -1,14 +1,15 @@
 from .base import ApiResponse, ModelApiResponse
 from .market import (
-    CloudMarket,
+    Market,
+    MarketListResponse,
+    LastTrade,
+    TradeContract,
+    Trade,
+    Tick
+)
+from .market_data import (
     CloudLastTrade,
-    CloudTradeContract,
-    MarketPriceInformation,
-    MarketTechnicalInformation,
-    HaasChartPricePlot,
-    MarketPriceSummary,
-    HaasChartTradeMarket,
-    CloudTradeMarket
+    CloudTradeContract
 )
 from .account import UserAccount, AccountList, AccountData, AccountBalance
 from .lab import (
@@ -46,15 +47,14 @@ from .backtest import (
 __all__ = [
     'ApiResponse',
     'ModelApiResponse',
-    'CloudMarket',
+    'Market',
+    'MarketListResponse',
+    'LastTrade',
+    'TradeContract',
+    'Trade',
+    'Tick',
     'CloudLastTrade',
     'CloudTradeContract',
-    'MarketPriceInformation',
-    'MarketTechnicalInformation',
-    'HaasChartPricePlot',
-    'MarketPriceSummary',
-    'HaasChartTradeMarket',
-    'CloudTradeMarket',
     'UserAccount',
     'AccountList',
     'AccountData',

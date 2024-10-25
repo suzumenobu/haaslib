@@ -1,10 +1,10 @@
 import random
 import logging
 # Update imports to use executor instead of api
-from haaslib.executor import RequestsExecutor, Guest, HaasApiError, get_all_markets_by_pricesource
+from haaslib.executor import RequestsExecutor, Guest, HaasApiError
 from haaslib.api import get_accounts  # Keep this import as it's still in api.py
 from haaslib.config import config
-from haaslib.model import CloudMarket, AccountList
+from haaslib.models.market import Market
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
