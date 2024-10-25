@@ -1,36 +1,36 @@
-"""Custom exceptions for HaasLib"""
-from typing import Optional, Any
+from typing import Optional
 
-class HaasLibError(Exception):
-    """Base exception for all HaasLib errors"""
+class HaaslibException(Exception):
+    """Base exception for haaslib"""
     pass
 
-class HaasApiError(HaasLibError):
-    """API-related errors"""
-    def __init__(
-        self,
-        message: str,
-        response: Optional[Any] = None,
-        status_code: Optional[int] = None
-    ):
+class HaasApiError(HaaslibException):
+    """Base exception for API errors"""
+    def __init__(self, message: str, response: Optional[dict] = None, status_code: Optional[int] = None):
         super().__init__(message)
         self.response = response
         self.status_code = status_code
-
-class AuthenticationError(HaasApiError):
-    """Authentication-related errors"""
-    pass
-
 class RateLimitError(HaasApiError):
-    """Rate limit exceeded"""
-    def __init__(self, retry_after: float):
-        super().__init__("Rate limit exceeded")
+    """Raised when rate limit is exceeded"""
+    def __init__(self, retry_after: float, response: Optional[dict] = None, status_code: Optional[int] = None):
+        super().__init__("Rate limit exceeded", response, status_code)
         self.retry_after = retry_after
-
-class ValidationError(HaasLibError):
-    """Data validation errors"""
+class AuthenticationError(HaasApiError):
+    """Raised when authentication fails"""
     pass
 
-class ConfigurationError(HaasLibError):
-    """Configuration-related errors"""
+class LabError(HaasApiError):
+    """Raised when lab operations fail"""
+    pass
+
+class MarketError(HaasApiError):
+    """Raised when market operations fail"""
+    pass
+
+class AccountError(HaasApiError):
+    """Raised when account operations fail"""
+    pass
+
+class BotError(HaasApiError):
+    """Raised when bot operations fail"""
     pass

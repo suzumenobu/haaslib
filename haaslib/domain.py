@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import enum
 from datetime import datetime, timedelta
-from typing import Literal
+from typing import Literal, Optional
 
 
 @dataclasses.dataclass
@@ -13,12 +13,17 @@ class BacktestPeriod:
     """
 
     class Type(enum.Enum):
-        MONTH = enum.auto()
+        MINUTE = enum.auto()
+        HOUR = enum.auto()
         DAY = enum.auto()
+        WEEK = enum.auto()
+        MONTH = enum.auto()
+        YEAR = enum.auto()
 
     period_type: BacktestPeriod.Type
     count: int
-    from_time: datetime = dataclasses.field(default_factory=datetime.now)
+    custom_start: Optional[int] = None
+    custom_end: Optional[int] = None
 
     def as_secs(self) -> int:
         """
@@ -67,6 +72,20 @@ class MarketTag:
 
     tag: str
 
+    @classmethod
+    def from_components(
+        cls,
+        price_source: str,
+        base: str,
+        quote: str,
+        market_type: str = "SPOT"
+    ) -> MarketTag:
+        """Create market tag from components"""
+        return cls(f"{price_source}_{base}_{quote}_{market_type}")
+
+    def __str__(self) -> str:
+        return self.tag
+
 
 class HaaslibException(Exception):
     pass
@@ -88,3 +107,10 @@ PriceDataStyle = Literal[
     "Mountain",
 ]
 
+
+@dataclasses.dataclass
+class ScriptParameter:
+    """Script parameter configuration"""
+    name: str
+    value: str
+    parameter_type: str
