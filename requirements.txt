@@ -1,0 +1,13 @@
+requests>=2.25.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+python-dotenv>=0.19.0
+loguru>=0.5.3
+
+# Development dependencies
+pytest>=6.0
+pytest-cov>=2.0
+black>=21.0
+isort>=5.0
+mypy>=0.900
+flake8>=3.9
