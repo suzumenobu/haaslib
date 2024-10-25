@@ -18,62 +18,35 @@ from .model import (
 
 log = logging.getLogger(__name__)
 
-def get_all_markets(executor: RequestsExecutor[Authenticated]) -> MarketList:
+def get_all_markets(executor: RequestsExecutor) -> MarketList:
     """Get all available markets"""
-    log.info("Fetching all markets")
     response = executor.execute(
-        endpoint="Price",
-        response_type=dict,  # Change to dict temporarily for debugging
-        query_params={"channel": "MARKETLIST"}
+        endpoint="Market/GetMarkets",
+        response_type=MarketList
     )
-    log.debug(f"Raw response: {response}")
     
+    # Check if the response was successful
     if not response.Success:
-        raise HaasApiError(f"Failed to fetch markets: {response}")
+        raise HaasApiError(f"Failed to fetch markets: {response.Error}")
     
-    # Convert the response to MarketList
-    try:
-        if isinstance(response.Data, dict):
-            return MarketList(**response.Data)
-        elif isinstance(response.Data, list):
-            return MarketList(root=response.Data)
-        else:
-            raise HaasApiError(f"Unexpected response format: {response.Data}")
-    except Exception as e:
-        log.error(f"Error parsing market data: {e}")
-        raise HaasApiError(f"Failed to parse market data: {e}")
+    # Validate the response data
+    if not isinstance(response.Data, MarketList):
+        raise HaasApiError(f"Unexpected response format: {response.Data}")
+    
+    return response.Data
 
-def get_all_markets_by_pricesource(
-    executor: RequestsExecutor[Authenticated],
-    price_source: str
-) -> List[CloudMarket]:
+def get_all_markets_by_pricesource(executor: RequestsExecutor, price_source: str) -> List[CloudMarket]:
     """Get markets filtered by price source"""
-    log.info(f"Fetching markets for price source: {price_source}")
-    response = executor.execute(
-        endpoint="Price",
-        response_type=dict,  # Change to dict temporarily for debugging
-        query_params={"channel": "MARKETLIST", "pricesource": price_source}
-    )
-    log.debug(f"Raw response: {response}")
+    markets = get_all_markets(executor)
     
-    if not response.Success:
-        raise HaasApiError(f"Failed to fetch markets: {response}")
+    # Validate the markets data
+    if not isinstance(markets, MarketList):
+        raise HaasApiError(f"Unexpected markets format: {markets}")
     
-    try:
-        if isinstance(response.Data, dict):
-            markets = MarketList(**response.Data)
-        elif isinstance(response.Data, list):
-            markets = MarketList(root=response.Data)
-        else:
-            raise HaasApiError(f"Unexpected response format: {response.Data}")
-        
-        return [
-            market for market in markets.root 
-            if market.price_source.lower() == price_source.lower()
-        ]
-    except Exception as e:
-        log.error(f"Error parsing market data: {e}")
-        raise HaasApiError(f"Failed to parse market data: {e}")
+    return [
+        market for market in markets.root 
+        if market.price_source.lower() == price_source.lower()
+    ]
 
 def get_lab_details(executor: RequestsExecutor[Authenticated], lab_id: str) -> UserLabDetails:
     response = executor.execute(

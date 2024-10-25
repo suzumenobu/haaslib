@@ -1,25 +1,44 @@
-from typing import List, Any, Optional
-from pydantic import BaseModel, Field
+from typing import List, Optional
+from pydantic import BaseModel
+
+class UserAccount(BaseModel):
+    """User account information"""
+    account_id: str
+    name: str
+    description: Optional[str] = None
+    enabled: bool = True
+    is_demo: bool = False
+    
+    class Config:
+        from_attributes = True
 
 class AccountData(BaseModel):
-    balances: List[Any] = Field(alias="Balances")
-    orders: List[Any] = Field(alias="Orders")
-    positions: List[Any] = Field(alias="Positions")
-    trades: List[Any] = Field(alias="Trades")
-
+    """Detailed account information"""
+    account_id: str
+    name: str
+    description: Optional[str] = None
+    enabled: bool = True
+    is_demo: bool = False
+    api_key: Optional[str] = None
+    api_secret: Optional[str] = None
+    additional_settings: Optional[dict] = None
+    
     class Config:
-        populate_by_name = True
+        from_attributes = True
 
 class AccountBalance(BaseModel):
-    account_id: str = Field(alias="AccountId")
-    balance: float = Field(alias="Balance")
-    currency: str = Field(alias="Currency")
-
+    """Account balance information"""
+    currency: str
+    balance: float
+    available: float
+    reserved: float
+    
     class Config:
-        populate_by_name = True
+        from_attributes = True
 
 class AccountList(BaseModel):
-    root: List[AccountData]
-
+    """List of user accounts"""
+    root: List[UserAccount]
+    
     class Config:
-        populate_by_name = True
+        from_attributes = True
