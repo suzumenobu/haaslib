@@ -1,0 +1,61 @@
+* Contributing Guide
+
+** Development Setup
+
+1. Fork the repository
+2. Clone your fork:
+#+begin_src bash
+git clone https://github.com/yourusername/haaslib.git
+cd haaslib
+#+end_src
+
+3. Create a virtual environment:
+#+begin_src bash
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+#+end_src
+
+4. Install development dependencies:
+#+begin_src bash
+pip install -e ".[dev]"
+#+end_src
+
+** Code Style
+
+We use:
+- black for code formatting
+- isort for import sorting
+- mypy for type checking
+- flake8 for linting
+
+Run all checks:
+#+begin_src bash
+black .
+isort .
+mypy haaslib
+flake8 haaslib
+#+end_src
+
+** Testing
+
+Run tests with pytest:
+#+begin_src bash
+pytest
+#+end_src
+
+With coverage:
+#+begin_src bash
+pytest --cov=haaslib
+#+end_src
+
+** Pull Request Process
+
+1. Create a new branch for your feature
+2. Make your changes
+3. Add tests for new functionality
+4. Update documentation as needed
+5. Submit a pull request
+
+** Code of Conduct
+
+Please note that this project is released with a Contributor Code of Conduct. By participating in this project you agree to abide by its terms.
