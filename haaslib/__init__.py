@@ -18,23 +18,89 @@ logger.info("Starting import in __init__.py")
 logger.info(f"Python version: {sys.version}")
 logger.info(f"Python path: {sys.path}")
 
-# Import and export components
-from .executor import RequestsExecutor, Guest, Authenticated, HaasApiError
-from .models import ApiResponse, ModelApiResponse, CloudMarket, MarketList
-from .api import get_all_markets, get_all_markets_by_pricesource
-
-logger.info("Finished imports in __init__.py")
+# Export models
+from .models.market import (
+    Market,
+    MarketListResponse,
+    PriceSource,
+    OrderBook,
+    Trade,
+    Tick,
+    PriceSnapshot,
+    FiatConversion
+)
+from .models.auth import AuthResponse
+from .models.trading import (
+    Order,
+    MarginSettings
+)
+from .exceptions import AuthenticationError, HaasApiError
+from .executor import RequestsExecutor, Authenticated, Guest
+from .api.market import get_all_markets, get_all_markets_by_pricesource
+from .api.price import (
+    get_server_time,
+    get_all_pricesources_simple,
+    get_pricesources_detailed,
+    get_all_markets_by_source,
+    get_all_markets,
+    get_unique_markets,
+    get_markets_by_source,
+    get_trade_markets,
+    get_coin_list,
+    get_price,
+    get_orderbook,
+    get_last_trades,
+    get_sync_ticks,
+    get_last_ticks,
+    get_deep_ticks,
+    get_price_snapshot,
+    get_fiat_conversions
+)
+from .api.trading import (
+    place_order,
+    cancel_order,
+    get_used_margin
+)
 
 __all__ = [
-    'RequestsExecutor',
-    'Guest',
-    'Authenticated',
+    'Market',
+    'MarketListResponse',
+    'PriceSource',
+    'OrderBook',
+    'Trade',
+    'Tick',
+    'PriceSnapshot',
+    'FiatConversion',
+    'AuthResponse',
+    'AuthenticationError',
     'HaasApiError',
-    'ApiResponse',
-    'ModelApiResponse',
-    'CloudMarket',
-    'MarketList',
+    'RequestsExecutor',
+    'Authenticated',
+    'Guest',
     'get_all_markets',
     'get_all_markets_by_pricesource',
-    'logger',
+    'get_server_time',
+    'get_all_pricesources_simple',
+    'get_pricesources_detailed',
+    'get_all_markets_by_source',
+    'get_all_markets',
+    'get_unique_markets',
+    'get_markets_by_source',
+    'get_trade_markets',
+    'get_coin_list',
+    'get_price',
+    'get_orderbook',
+    'get_last_trades',
+    'get_sync_ticks',
+    'get_last_ticks',
+    'get_deep_ticks',
+    'get_price_snapshot',
+    'get_fiat_conversions',
+    'Order',
+    'MarginSettings',
+    'place_order',
+    'cancel_order',
+    'get_used_margin'
 ]
+
+logger.info("Finished imports in __init__.py")
