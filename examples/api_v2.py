@@ -82,7 +82,7 @@ class Authenticated(UserState):
     """
 
     user_id: str
-    interface_key: str
+    interface_secret: str
 
 
 State = TypeVar("State", bound=Guest | Authenticated)
@@ -138,7 +138,7 @@ class RequestsExecutor(Generic[State]):
         :param password: Password used to login into Web UI
         :raises HaasApiError: If credentials are incorrect
         """
-        interface_key = "".join(f"{random.randint(0, 100)}" for _ in range(10))
+        interface_secret = "".join(f"{random.randint(0, 100)}" for _ in range(10))
         resp = self._execute_inner(
             "User",
             response_type=dict,
@@ -146,7 +146,7 @@ class RequestsExecutor(Generic[State]):
                 "channel": "LOGIN_WITH_CREDENTIALS",
                 "email": email,
                 "password": password,
-                "interfaceKey": interface_key,
+                "interfaceKey": interface_secret,
             },
         )
         if not resp.success:
@@ -159,7 +159,7 @@ class RequestsExecutor(Generic[State]):
                 "channel": "LOGIN_WITH_ONE_TIME_CODE",
                 "email": email,
                 "pincode": random.randint(100_000, 200_000),
-                "interfaceKey": interface_key,
+                "interfaceKey": interface_secret,
             },
         )
         if not resp.success:
@@ -168,7 +168,7 @@ class RequestsExecutor(Generic[State]):
         assert resp.data is not None
 
         state = Authenticated(
-            interface_key=interface_key, user_id=resp.data.data.user_id
+            interface_secret=interface_secret, user_id=resp.data.data.user_id
         )
 
         return RequestsExecutor(
@@ -234,7 +234,7 @@ class RequestsExecutor(Generic[State]):
             query_params = copy.deepcopy(query_params)
 
         query_params["userid"] = self.state.user_id
-        query_params["interfacekey"] = self.state.interface_key
+        query_params["interfacekey"] = self.state.interface_secret
 
         return self._execute_inner(endpoint, response_type, query_params)
 
